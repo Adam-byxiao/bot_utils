@@ -102,7 +102,7 @@ def detect_lateral_ca(image_path, edge_threshold=50, roi_size=1000):
     return stats
 
 if __name__ == "__main__":
-    result = detect_lateral_ca("brio-local.jpg", edge_threshold=50, roi_size=1000)
+    result = detect_lateral_ca("12233_2.jpg", edge_threshold=50, roi_size=1000)
     print("===== 横向色差分析结果 =====")
     print(f"红通道平均偏移: {result['red_mean']:.2f} px (±{result['red_std']:.2f})")
     print(f"蓝通道平均偏移: {result['blue_mean']:.2f} px (±{result['blue_std']:.2f})")
