@@ -83,8 +83,9 @@ def main(image_path, num = 22):
 
     #plot
     plt.plot(Gray_List, 'g-', linewidth=2)
-    plt.title('Line Spread Function')
-    plt.xlabel('Position')
+    plt.title('Gray States Function')
+    plt.xlabel('Stats')
+    plt.ylabel('Grayscale')
     plt.grid(True, linestyle='--', alpha=0.7)
 
     plt.tight_layout()
