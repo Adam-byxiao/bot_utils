@@ -157,6 +157,12 @@ def analyze_chromatic_noise(image_path, color_space='YUV', roi_size=512, n_frame
 
     return {'noise_stats': noise_stats, 'nps': nps_results}
 
+
+def output(results):
+    print("===== 色彩噪声分析结果 =====")
+    for ch, stats in results['noise_stats'].items():
+        print(f"[{ch}通道] 噪声均值: {stats['noise_mean']:.2f}, SNR: {stats['SNR']:.1f} dB")
+
 if __name__ == "__main__":
     image_path = ["bot-gm1.png", "bot-gm2.png"]
     results = analyze_chromatic_noise(
@@ -165,6 +171,6 @@ if __name__ == "__main__":
         roi_size=512,
         n_frames=2
     )
-    print("===== 色彩噪声分析结果 =====")
-    for ch, stats in results['noise_stats'].items():
-        print(f"[{ch}通道] 噪声均值: {stats['noise_mean']:.2f}, SNR: {stats['SNR']:.1f} dB")
+
+    output(results)
+    

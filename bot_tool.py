@@ -72,7 +72,7 @@ class bot_test():
 
         logging.error(f'Failed to connect to {self.ip}')
         return False
-    
+
     def AudioTest(self):
         print('AudioTest')
 
@@ -102,7 +102,6 @@ class bot_test():
         print('ThermalTest')
 
     def SingleModeTest(self, mode):
-
         if mode == bot_test.test_mode[0]:
             self.AudioTest()
         elif mode == bot_test.test_mode[1]:
@@ -120,6 +119,7 @@ class bot_test():
         elif mode == bot_test.test_mode[7]:
             self.ThermalTest()
         
+
     def ModeTest(self):
         Modenum = len(self.modes)
         mode_index = 0

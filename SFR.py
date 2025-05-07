@@ -61,7 +61,8 @@ def calculate_edge_angle(image, blur_size=3):
     使用梯度投影法计算边缘角度
     """
     # 预处理：高斯模糊
-    blurred = cv2.GaussianBlur(image, (blur_size, blur_size), 0)
+    #blurred = cv2.GaussianBlur(image, (blur_size, blur_size), 0)
+    blurred = image
     
     # 计算梯度
     grad_x = cv2.Scharr(blurred, cv2.CV_64F, 1, 0)
@@ -310,10 +311,17 @@ def plot_sfr_results(results):
     plt.tight_layout()
     plt.show()
 
+def output(results):
+    print(f"MTF50: {results['mtf50']:.2f} cycles/mm")
+    print(f"MTF50 Position: {results['mtf50_p']:.2f} cyc/pixel")
+    print((f"standard_freq_at_50_mtf: {results['standard_freq_at_50_mtf']:.2f} cycles/mm"))
+    print((f"mtf_equal: {results['mtf_equal']:.2f} cycles/mm"))
+    print((f"k_sharp: {results['k_sharp']:.2f} cycles/mm"))
+
 def main(image_path):
     # 图像加载与预处理
     img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    img = gamma_correction(img)
+    #img = gamma_correction(img)
     #img = cv2.GaussianBlur(img, (3,3), 0)
     
     # 手动选择ROI
@@ -333,8 +341,9 @@ def main(image_path):
     print((f"mtf_equal: {results['mtf_equal']:.2f} cycles/mm"))
     print((f"k_sharp: {results['k_sharp']:.2f} cycles/mm"))
 
+    output(results)
     # 可视化
     plot_sfr_results(results)
 
 if __name__ == "__main__":
-    main("12233card.png")
+    main("12233_3.jpg")
