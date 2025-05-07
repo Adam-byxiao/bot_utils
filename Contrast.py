@@ -117,12 +117,7 @@ def analyze_contrast(image_path, block_size=32, method='RMS'):
         "local_contrast_std": lc_std
     }
 
-if __name__ == "__main__":
-    results = analyze_contrast(
-        image_path="roi_1.png",
-        block_size=32,
-        method='RMS'
-    )
+def output(results):
     print("===== 对比度分析结果 =====")
     print(f"动态范围: {results['dynamic_range']} (0-255)")
     print(f"Michelson对比度: {results['michelson_contrast']:.3f}")
@@ -130,3 +125,12 @@ if __name__ == "__main__":
     print(f"直方图峰度: {results['histogram_kurtosis']:.2f}")
     print(f"直方图偏度: {results['histogram_skewness']:.2f}")
     print(f"局部对比度均值: {results['local_contrast_mean']:.3f}")
+
+if __name__ == "__main__":
+    results = analyze_contrast(
+        image_path="roi_1.png",
+        block_size=32,
+        method='RMS'
+    )
+    
+    output(results)
