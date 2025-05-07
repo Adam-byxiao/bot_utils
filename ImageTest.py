@@ -1,8 +1,9 @@
 import wx
 import os
-import ColorSaturation
-import SNR
-import SFR
+import camera_script.SFR as SFR
+import camera_script.ColorSaturation as ColorSaturation
+import camera_script.SNR as SNR
+
 
 
 
