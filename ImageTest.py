@@ -3,7 +3,8 @@ import os
 import camera_script.SFR as SFR
 import camera_script.ColorSaturation as ColorSaturation
 import camera_script.SNR as SNR
-
+import camera_script.hdr as hdr
+import camera_script.ChromaticAberration as ChromaticAberration
 
 
 
@@ -11,7 +12,7 @@ class ImageViewerFrame(wx.Frame):
     def __init__(self, parent, title):
         super(ImageViewerFrame, self).__init__(parent, title=title, size=(300, 200))
 
-        self.funcs = ["空间频率响应", "色彩饱和度", "信噪比", "横向色差", "对比度"]
+        self.funcs = ["空间频率响应", "色彩饱和度", "信噪比", "横向色差", "动态范围"]
         self.func = ""
         self.path = ''
         
@@ -101,9 +102,9 @@ class ImageViewerFrame(wx.Frame):
         if self.func == self.funcs[2]:
             SNR.main(self.path)
         if self.func == self.funcs[3]:
-            print('testfunc:3')
+            ChromaticAberration.main(self.path)
         if self.func == self.funcs[4]:
-            print('testfunc:4')
+            hdr.main(self.path, 22)
 
     def LoadImage(self, path):
         """加载并显示图片"""
