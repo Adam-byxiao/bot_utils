@@ -56,12 +56,12 @@ def GrayList_Detection(graylist):
             old = gray_difference[i]
     
     for i in range(len(gray_difference)):
-        if abs(gray_difference[i]) < 6:
+        if abs(gray_difference[i]) < 8:
             break
         else:
             k1 = k1 + 1
     for i in range(len(gray_difference)):
-        if abs(gray_difference[i]) < 6:
+        if abs(gray_difference[i]) < 8:
             continue
         else:
              k3 =  k3 + 1
@@ -93,7 +93,7 @@ def main(image_path, num = 20):
     #OUTPUT
     print("===== 动态范围分析结果 =====")
     print(f"动态范围: {hdr} (0-255)")
-    print(f"顺序灰度阶数（从头计算灰度差大于6）: {k1}")
+    print(f"顺序灰度阶数（从头计算灰度差大于8）: {k1}")
     print(f"总灰度阶数（灰度差大于6）: {k3}")
 
     #plot
