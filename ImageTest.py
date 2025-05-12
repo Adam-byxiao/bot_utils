@@ -5,6 +5,7 @@ import camera_script.ColorSaturation as ColorSaturation
 import camera_script.SNR as SNR
 import camera_script.hdr as hdr
 import camera_script.ChromaticAberration as ChromaticAberration
+import camera_script.Contrast as Contrast
 
 
 
@@ -12,7 +13,7 @@ class ImageViewerFrame(wx.Frame):
     def __init__(self, parent, title):
         super(ImageViewerFrame, self).__init__(parent, title=title, size=(300, 200))
 
-        self.funcs = ["空间频率响应", "色彩饱和度", "信噪比", "横向色差", "动态范围"]
+        self.funcs = ["空间频率响应", "色彩饱和度", "信噪比", "横向色差", "动态范围", "对比度"]
         self.func = ""
         self.path = ''
         
@@ -104,7 +105,10 @@ class ImageViewerFrame(wx.Frame):
         if self.func == self.funcs[3]:
             ChromaticAberration.main(self.path)
         if self.func == self.funcs[4]:
-            hdr.main(self.path, 22)
+            hdr.main(self.path, 20)
+        if self.func == self.funcs[5]:
+            result = Contrast.analyze_contrast(self.path, block_size=32, method='RMS')
+            Contrast.output(result)
 
     def LoadImage(self, path):
         """加载并显示图片"""

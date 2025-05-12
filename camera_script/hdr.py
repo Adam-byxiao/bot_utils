@@ -33,11 +33,20 @@ def HDR_calculation(pieces):
     return hdr, gray_mean
 
 def GrayList_Detection(graylist):
-    gray_difference = [graylist[i] - graylist[i-1] for i in range(1, len(graylist))]
+    grayrange = graylist[0] - graylist[len(graylist)-1]
+    k = 255/grayrange
+    for i in range(len(graylist)):
+        graylist[i] -= graylist[len(graylist)-1]
+        graylist[i] = graylist[i] * k
+    print(graylist)
+    print(len(graylist))
+    gray_difference = [graylist[i] - graylist[i-1] for i in range(1, 20)]
+    print(gray_difference)
     old = gray_difference[0]
     #k1:当灰度数组的差分值第一次小于8时返回该值 k2：当灰度数组的差分值第一次不是递减是返回该值
     k1 = 1
-    k2 = 2
+    k2 = 1
+    k3 = 1
     print(gray_difference)
     for i in range(1, len(gray_difference)):
         if(old - gray_difference[i]) < 0:
@@ -47,15 +56,21 @@ def GrayList_Detection(graylist):
             old = gray_difference[i]
     
     for i in range(len(gray_difference)):
-        if abs(gray_difference[i]) < 8:
+        if abs(gray_difference[i]) < 6:
             break
         else:
             k1 = k1 + 1
-    return k1, k2
+    for i in range(len(gray_difference)):
+        if abs(gray_difference[i]) < 6:
+            continue
+        else:
+             k3 =  k3 + 1
+            
+    return k1, k2, k3
 
         
 
-def main(image_path, num = 22):
+def main(image_path, num = 20):
     image = cv2.imread(image_path, cv2.IMREAD_COLOR)
 
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -73,13 +88,13 @@ def main(image_path, num = 22):
 
     Gray_List = []
     hdr,  Gray_List = HDR_calculation(List)
-    k1, k2 = GrayList_Detection(Gray_List)
+    k1, k2, k3 = GrayList_Detection(Gray_List)
 
     #OUTPUT
     print("===== 动态范围分析结果 =====")
     print(f"动态范围: {hdr} (0-255)")
-    print(f"灰度阶数（灰度差大于8）: {k1}")
-    print(f"灰度阶数（等差数列长度）: {k2}")
+    print(f"顺序灰度阶数（从头计算灰度差大于6）: {k1}")
+    print(f"总灰度阶数（灰度差大于6）: {k3}")
 
     #plot
     plt.plot(Gray_List, 'g-', linewidth=2)

@@ -37,7 +37,8 @@ def SNR_calculation(pieces):
                     delta_point += (int(Color_piece[m, n, 0]) - int(Color_piece[x, y, 0])) ** 2
                 tmp_cala += base_point
                 tmp_calb += delta_point
-        snr += (10 * math.log10(tmp_cala/tmp_calb)) ** 2
+        if(tmp_calb != 0):
+            snr += (10 * math.log10(tmp_cala/tmp_calb)) ** 2
     
     snr = math.sqrt((snr / len(pieces)))
 
