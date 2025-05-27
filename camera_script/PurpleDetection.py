@@ -106,7 +106,7 @@ def main(filename):
 
     image2 = cv2.imread(filename[1])
 
-    mask2 = ImageLAB(image1)
+    mask2 = ImageLAB(image2)
     image_rgb2 = cv2.cvtColor(image2, cv2.COLOR_BGR2RGB)
     purple_mask2, image_marked2, purple_ratio2 = PurpleDetection(image_rgb2, mask2)
 
@@ -157,5 +157,5 @@ def main(filename):
     plt.show()
 
 if __name__ == "__main__":
-    filename = ["bot-local.jpg", "brio-local.jpg"]
+    filename = ["D:\\work\\image\\subject\\Subjective-HDR-20250516T065214Z-1-001\\Subjective-HDR\\0-local\\bot_local_hdr.jpg", "D:\\work\\image\\subject\\Subjective-HDR-20250516T065214Z-1-001\\Subjective-HDR\\0-local\\Loji_local_hdr.jpg"]
     main(filename)
