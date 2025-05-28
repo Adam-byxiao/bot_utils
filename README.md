@@ -16,7 +16,11 @@ audio_script
 
     AudioQuality.py			    用于进行一些音频的性能分析，尚未完成和验证
 
-    Video2Audio.py			    用于将会议中录制的mp4格式文件转化为wav音频文件
+    Video2Audio.py			    用于将会议中录制的mp4格式文件转化为wav音频文
+
+    AudioStoi.py				    使用stoi进行语音清晰度和可懂型的分析
+
+    ![1748436777815](image/README/1748436777815.png)
 
 AudioFile						    音频文件的处理目录
 
