@@ -10,7 +10,7 @@ ImageTest.py					    ImageTest.py 是图像测试的界面工具，目前实现�
 
 NoiseTest.py					    NoiseTest.py是时域分析噪声的测试工具
 
-audio_script				
+audio_script
 
     AudioAligner.py			    用于将录制音频与原始音频进行时间轴的对齐
 
@@ -26,7 +26,7 @@ camera_script
 
     CheckNoise.py				    分析计算噪声（随机噪声），需要处理时域信号
 
-    ChromaticAberration.py	    分析横向色差，表现出在强对比度和Edge边的色差表现
+    ChromaticAberration.py	            分析横向色差，表现出在强对比度和Edge边的色差表现
 
     ColorNoise.py				    分析计算色彩噪声，需要处理时域信号
 
