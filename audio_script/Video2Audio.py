@@ -1,13 +1,15 @@
 import os
 import subprocess
 import wx
+from wx.lib.pubsub import pub
 
 ffmpeg_path = "D:/software/ffmpeg/bin/ffmpeg.exe"
 
 
 class AudioConverterApp(wx.Frame):
-    def __init__(self):
-        super().__init__(None, title="MP4 转 WAV 转换器", size=(800, 600))
+    def __init__(self, parent=None):  # 添加parent参数
+        super().__init__(parent, title="MP4 转 WAV 转换器", size=(800, 600))
+        self.parent = parent  # 保存主窗口引用
         
         self.panel = wx.Panel(self)
         self.SetMinSize((400, 250))
@@ -174,7 +176,9 @@ class AudioConverterApp(wx.Frame):
             
             self.convert_mp4_to_wav(input_folder, output_folder, sample_rate, channels)
             self.log.AppendText("转换完成!\n\n")
-            wx.MessageBox("转换完成!", "完成", wx.OK|wx.ICON_INFORMATION)
+            #wx.MessageBox("转换完成!", "完成", wx.OK|wx.ICON_INFORMATION)
+            if self.parent:
+                pub.sendMessage("task_finished", task_name="视频转音频处理") # 只发送完成信号
         except Exception as e:
             self.log.AppendText(f"错误: {str(e)}\n")
             wx.MessageBox(f"转换出错: {str(e)}", "错误", wx.OK|wx.ICON_ERROR)
@@ -197,8 +201,23 @@ class AudioConverterApp(wx.Frame):
             output_folder = input_folder
         else:
             os.makedirs(output_folder, exist_ok=True)
+            # 获取文件列表
+        mp4_files = [f for f in os.listdir(input_folder) if f.lower().endswith('.mp4')]
+        total_files = len(mp4_files)
+
+        if total_files == 0:
+            message = "未找到MP4文件"
+            self.log.AppendText(message + "\n")
+            if self.parent:
+                pub.sendMessage("output", message=message)
+            return
+
+        message = f"开始处理 {total_files} 个MP4文件..."
+        self.log.AppendText(message + "\n")
+        if self.parent:
+            pub.sendMessage("output", message=message)
         
-        for filename in os.listdir(input_folder):
+        for i, filename in enumerate(mp4_files):
             if filename.lower().endswith('.mp4'):
                 # 使用os.path.join构建路径
                 input_path = os.path.join(input_folder, filename)
@@ -227,8 +246,10 @@ class AudioConverterApp(wx.Frame):
                 print(command)
                 
                 try:
-                    self.log.AppendText(f"正在转换: {filename} -> {output_filename}\n")
-                    self.log.AppendText(f"执行命令: {command}\n")
+                    message = f"正在处理文件 {i+1}/{total_files}: {filename}"
+                    self.log.AppendText(message + "\n")
+                    if self.parent:
+                        pub.sendMessage("output", message=message)
                     
                     # 使用subprocess.run并处理编码问题
                     process = subprocess.Popen(
@@ -255,12 +276,30 @@ class AudioConverterApp(wx.Frame):
                             wx.Yield()'''
                 
                     if process.returncode == 0:
-                        self.log.AppendText(f"\n转换成功: {output_filename}\n")
+                        message = f"转换成功: {output_filename}"
                     else:
-                        self.log.AppendText(f"\n转换失败: {filename} (返回码: {process.returncode})\n")
+                        message = f"转换失败: {filename} (返回码: {process.returncode})"
+
+                    self.log.AppendText(message + "\n")
+                    if self.parent:
+                        pub.sendMessage("output", message=message)
+
+                    # 更新进度
+                    progress = int((i + 1) / total_files * 100)
+                    if self.parent:
+                        pub.sendMessage("progress", value=progress)
                 
                 except Exception as e:
-                    self.log.AppendText(f"处理文件 {filename} 时发生错误: {str(e)}\n")
+                    message = f"处理文件 {filename} 时发生错误: {str(e)}"
+                    self.log.AppendText(message + "\n")
+                    if self.parent:
+                        pub.sendMessage("output", message=message)
+        # 完成处理
+        message = "所有文件处理完成!"
+        self.log.AppendText(message + "\n")
+        if self.parent:
+            pub.sendMessage("output", message=message)
+            pub.sendMessage("worker_finished")
 
 if __name__ == "__main__":
     app = wx.App(False)
