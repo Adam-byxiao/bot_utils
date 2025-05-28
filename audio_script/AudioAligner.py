@@ -8,8 +8,10 @@ from wx.lib.pubsub import pub
 import glob
 
 class AudioAlignerApp(wx.Frame):
-    def __init__(self):
-        super().__init__(None, title="音频批量对齐工具", size=(1080, 720))
+    def __init__(self, parent=None):  # 添加parent参数
+        super().__init__(parent, title="音频批量对齐工具", size=(1080, 720))
+        self.parent = parent  # 保存主窗口引用
+
         
         pub.subscribe(self.append_log, "log")
         pub.subscribe(self.update_progress, "progress")
@@ -221,7 +223,7 @@ class AudioAlignerApp(wx.Frame):
         self.cancel_btn.Enable()
         
         # 在工作线程中处理
-        self.worker = AudioAlignerWorker(original_path, audio_files, output_folder)
+        self.worker = AudioAlignerWorker(original_path, audio_files, output_folder, self.parent)
         self.worker.start()
     
     def on_cancel(self, event):
@@ -241,11 +243,12 @@ class AudioAlignerApp(wx.Frame):
         wx.MessageBox("音频对齐处理完成!", "完成", wx.OK|wx.ICON_INFORMATION)
 
 class AudioAlignerWorker(Thread):
-    def __init__(self, original_path, audio_files, output_folder):
+    def __init__(self, original_path, audio_files, output_folder, parent = None):
         Thread.__init__(self)
         self.original_path = original_path
         self.audio_files = audio_files
         self.output_folder = output_folder
+        self.parent = parent
         self._stop = False
         self.daemon = True
     
@@ -254,6 +257,11 @@ class AudioAlignerWorker(Thread):
     
     def run(self):
         try:
+            message = f"开始处理 {len(self.audio_files)} 个音频文件..."
+            pub.sendMessage("log", message=message)
+            if self.parent:
+                pub.sendMessage("output", message=message)
+
             pub.sendMessage("log", message=f"开始处理 {len(self.audio_files)} 个音频文件...")
             
             # 加载原始音频
@@ -267,6 +275,9 @@ class AudioAlignerWorker(Thread):
                 
                 filename = os.path.basename(input_file)
                 pub.sendMessage("log", message=f"\n处理文件 {i+1}/{total_files}: {filename}")
+                
+                if self.parent:
+                    pub.sendMessage("output", message=message)
                 
                 try:
                     # 加载录制音频
@@ -306,12 +317,16 @@ class AudioAlignerWorker(Thread):
                 wx.CallAfter(pub.sendMessage, "progress", value=progress)
             
             if not self._stop:
-                pub.sendMessage("log", message="\n所有文件处理完成!")
+                #pub.sendMessage("log", message="\n所有文件处理完成!")
                 wx.CallAfter(pub.sendMessage, "worker_finished")
+                if self.parent:
+                    pub.sendMessage("output", message=message)
         
         except Exception as e:
             pub.sendMessage("log", message=f"处理过程中发生错误: {str(e)}")
             wx.CallAfter(pub.sendMessage, "worker_finished")
+            if self.parent:
+                pub.sendMessage("output", message=message)
     
     def find_alignment_offset(self, original, recorded):
         """找到录制音频与原始音频的最佳对齐偏移量"""

@@ -4,35 +4,45 @@
 
 文件结构如下：
 
-│  bot_tool.py						    bot_tool 是测试入口，编写了数个嵌套的测试类分别实现了测试对象、测试函数、测试对象，目前仅在硬件-电机测试中是完全体
+bot_tool.py					    bot_tool 是测试入口，编写了数个嵌套的测试类分别实现了测试对象、测试函数、测试对象，目前仅在硬件-电机测试中是完全体
 
-│  ImageTest.py					    ImageTest.py 是图像测试的界面工具，目前实现了几个单一分析的脚本界面化，还有一些需要时域分析的用例暂时未完成处理
+ImageTest.py					    ImageTest.py 是图像测试的界面工具，目前实现了几个单一分析的脚本界面化
 
+NoiseTest.py					    NoiseTest.py是时域分析噪声的测试工具
 
-│  README.md
+audio_script				
 
+    AudioAligner.py			    用于将录制音频与原始音频进行时间轴的对齐
 
-├─camera_script
+    AudioQuality.py			    用于进行一些音频的性能分析，尚未完成和验证
 
-│      CheckNoise.py				    分析计算噪声（随机噪声），需要处理时域信号
+    Video2Audio.py			    用于将会议中录制的mp4格式文件转化为wav音频文件
 
-│      ChromaticAberration.py		    分析横向色差，表现出在强对比度和Edge边的色差表现
+AudioFile						    音频文件的处理目录
 
-│      ColorNoise.py				    分析计算色彩噪声，需要处理时域信号
+AudioBox.py					    将上述的音频对齐与格式转化工具集成的一个界面脚本
 
-│      ColorSaturation.py			    分析色彩饱和度
+camera_script
 
-│      Contrast.py					    计算对比度表现
+    CheckNoise.py				    分析计算噪声（随机噪声），需要处理时域信号
 
-│      hdr.py						    计算动态范围（基于灰阶卡），该用例由于物料规格和计算方法息息相关需要调整标准
+    ChromaticAberration.py	    分析横向色差，表现出在强对比度和Edge边的色差表现
 
-│      PurpleDetection.py			    进行紫边检测，原理类似横向色差，主要是针对特定的问题专门实现
+    ColorNoise.py				    分析计算色彩噪声，需要处理时域信号
 
-│      SFR.py						    进行空间频率分析，基于ISO12233图卡
+    ColorSaturation.py			    分析色彩饱和度
 
-│      SNR.py						    进行信噪比分析
+    Contrast.py					    计算对比度表现
 
-├─image							    一些先期测试用的图像
+    hdr.py						    计算动态范围（基于灰阶卡），该用例由于物料规格和计算方法息息相关需要调整标准
+
+    PurpleDetection.py			    进行紫边检测，原理类似横向色差，主要是针对特定的问题专门实现
+
+    SFR.py						    进行空间频率分析，基于ISO12233图卡
+
+    SNR.py						    进行信噪比分析
+
+image							    一些先期测试用的图像
 
 ---
 
