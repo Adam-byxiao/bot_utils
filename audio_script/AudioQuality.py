@@ -5,6 +5,8 @@ from fastdtw import fastdtw  # 需安装：pip install fastdtw
 from scipy.spatial.distance import euclidean
 from sklearn.metrics import mean_squared_error
 from scipy.stats import pearsonr
+from pystoi import stoi
+import soundfile as sf
 
 def compute_mel_spectrogram(audio_path, sr=16000, n_mels=80, hop_length=160):
     """计算梅尔图谱（转置为 (时间帧, 梅尔频带) 格式）"""
@@ -85,15 +87,21 @@ def enhanced_intelligibility_analysis(ref_audio, test_audio):
     
     return metrics
 
+def analysis_stoi(ref_audio, test_audio):
+    ref, fs = sf.read(ref_audio)
+    test, fs = sf.read(test_audio)
+    stoi_value = stoi(ref, test, fs_sig=fs)
+    print(f'STOI： {stoi_value}')
 
 # 示例调用
 if __name__ == "__main__":
     #ref_audio = "D:\\work\\Repository\\bot_acoustic_test\\plays\\p232_023_man.wav"
-    ref_audio = "D:\\work\\Repository\\bot_acoustic_test\\plays\\p232_023_man.wav"
-    test_audio = "D:\\work\\Repository\\bot_acoustic_test\\records\\zoom1\\zoom_jabra_man.wav"  # 故意放慢语速的测试语音
+    ref_audio = "D:\\work\\Repository\\bot_utils\\AudioFile\\originaudiofile\\p232_023_man.wav"
+    test_audio = "D:\\work\\Repository\\bot_utils\AudioFile\\aligner_wav\\aligned_zoom_owl_man.wav"  # 故意放慢语速的测试语音
     #test_audio = "D:\\work\\Repository\\bot_acoustic_test\\plays\\p232_023_man.wav"
 
-    results = enhanced_intelligibility_analysis(ref_audio, test_audio)
-    print("FastDTW-Enhanced Intelligibility Metrics:")
-    for k, v in results.items():
-        print(f"{k}: {v:.4f}")
+    #results = enhanced_intelligibility_analysis(ref_audio, test_audio)
+    #print("FastDTW-Enhanced Intelligibility Metrics:")
+    #for k, v in results.items():
+    #    print(f"{k}: {v:.4f}")
+    analysis_stoi(ref_audio, test_audio)

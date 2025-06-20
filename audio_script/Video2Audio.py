@@ -202,98 +202,82 @@ class AudioConverterApp(wx.Frame):
         else:
             os.makedirs(output_folder, exist_ok=True)
             # 获取文件列表
-        mp4_files = [f for f in os.listdir(input_folder) if f.lower().endswith('.mp4')]
-        total_files = len(mp4_files)
+
+        # 获取所有支持的输入文件（MP4 和 M4A）
+        supported_extensions = ('.mp4', '.m4a')
+        input_files = [f for f in os.listdir(input_folder) 
+                      if f.lower().endswith(supported_extensions)]
+        total_files = len(input_files)
 
         if total_files == 0:
-            message = "未找到MP4文件"
+            message = "未找到支持的音频/视频文件(支持 .mp4 和 .m4a)"
             self.log.AppendText(message + "\n")
             if self.parent:
                 pub.sendMessage("output", message=message)
             return
 
-        message = f"开始处理 {total_files} 个MP4文件..."
+        message = f"开始处理 {total_files} 个文件（MP4/M4A）..."
         self.log.AppendText(message + "\n")
         if self.parent:
             pub.sendMessage("output", message=message)
         
-        for i, filename in enumerate(mp4_files):
-            if filename.lower().endswith('.mp4'):
-                # 使用os.path.join构建路径
-                input_path = os.path.join(input_folder, filename)
-                output_filename = os.path.splitext(filename)[0] + '.wav'
-                output_path = os.path.join(output_folder, output_filename)
-                
-                # 修正路径格式
-                inputpath = self.fix_path(input_path)
-                outputpath = self.fix_path(output_path)
-                print(inputpath, outputpath)
-                
-                # 构建ffmpeg命令（使用字符串格式确保路径被正确引用）
-                command = f'"{ffmpeg_path}" -i "{inputpath}" -vn -acodec pcm_s16le -ar {sample_rate} -ac {channels} -y "{outputpath}"'
-                #command = 'ffmpeg -version'
-                # 构建ffmpeg命令（使用列表形式避免shell注入风险）
-                #command = [
-                #    'ffmpeg',
-                #    '-i', inputpath,
-                #    '-vn',
-                #    '-acodec', 'pcm_s16le',
-                #    '-ar', str(sample_rate),
-                #    '-ac', str(channels),
-                #    '-y',
-                #    outputpath
-                #]
-                print(command)
-                
-                try:
-                    message = f"正在处理文件 {i+1}/{total_files}: {filename}"
-                    self.log.AppendText(message + "\n")
-                    if self.parent:
-                        pub.sendMessage("output", message=message)
-                    
-                    # 使用subprocess.run并处理编码问题
-                    process = subprocess.Popen(
-                        command,
-                        stdout=subprocess.PIPE,
-                        stderr=subprocess.PIPE,
-                        encoding='utf-8'
-                        #universal_newlines=False  # 禁用自动解码
-                    )
-                    
-                    '''while True:
-                        output = process.stderr.read(1)  # 每次读取1字节
-                        if output == b'' and process.poll() is not None:
-                            break
-                        if output:
-                            try:
-                                # 尝试UTF-8解码，失败则使用回退编码
-                                text = output.decode('utf-8')
-                            except UnicodeDecodeError:
-                                # 中文Windows常用gbk编码
-                                text = output.decode('gbk', errors='replace')
-                            self.log.AppendText(text)
-                            self.log.ShowPosition(self.log.GetLastPosition())
-                            wx.Yield()'''
-                
-                    if process.returncode == 0:
-                        message = f"转换成功: {output_filename}"
-                    else:
-                        message = f"转换失败: {filename} (返回码: {process.returncode})"
+        for i, filename in enumerate(input_files):
+            input_path = os.path.join(input_folder, filename)
+            output_filename = os.path.splitext(filename)[0] + '.wav'
+            output_path = os.path.join(output_folder, output_filename)
 
-                    self.log.AppendText(message + "\n")
-                    if self.parent:
-                        pub.sendMessage("output", message=message)
+            # 修正路径格式
+            inputpath = self.fix_path(input_path)
+            outputpath = self.fix_path(output_path)
 
-                    # 更新进度
-                    progress = int((i + 1) / total_files * 100)
-                    if self.parent:
-                        pub.sendMessage("progress", value=progress)
-                
-                except Exception as e:
-                    message = f"处理文件 {filename} 时发生错误: {str(e)}"
-                    self.log.AppendText(message + "\n")
-                    if self.parent:
-                        pub.sendMessage("output", message=message)
+            # 构建 FFmpeg 命令（兼容 MP4 和 M4A）
+            command = [
+                ffmpeg_path,
+                '-i', inputpath,
+                '-vn',              # 禁用视频流
+                '-acodec', 'pcm_s16le',  # WAV 编码
+                '-ar', str(sample_rate),
+                '-ac', str(channels),
+                '-y',               # 覆盖输出文件
+                outputpath
+            ]
+
+            try:
+                message = f"正在处理文件 {i+1}/{total_files}: {filename}"
+                self.log.AppendText(message + "\n")
+                if self.parent:
+                    pub.sendMessage("output", message=message)
+
+                # 执行命令
+                process = subprocess.run(
+                    command,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE,
+                    text=True,
+                    encoding='utf-8',
+                    errors='replace'  # 处理编码问题
+                )
+
+                if process.returncode == 0:
+                    message = f"转换成功: {output_filename}"
+                else:
+                    message = f"转换失败: {filename} (错误: {process.stderr.strip()})"
+
+                self.log.AppendText(message + "\n")
+                if self.parent:
+                    pub.sendMessage("output", message=message)
+
+                # 更新进度
+                progress = int((i + 1) / total_files * 100)
+                if self.parent:
+                    pub.sendMessage("progress", value=progress)
+
+            except Exception as e:
+                message = f"处理文件 {filename} 时发生错误: {str(e)}"
+                self.log.AppendText(message + "\n")
+                if self.parent:
+                    pub.sendMessage("output", message=message)
+
         # 完成处理
         message = "所有文件处理完成!"
         self.log.AppendText(message + "\n")

@@ -86,8 +86,9 @@ class bot_test():
         motortest = MotorTester(self.client)
         #motortest.Case_HorizontalMax()
         #motortest.Case_HorizontalMax_pressure()
-        motortest.ReadTestInput()
-        motortest.StartTest()
+        #motortest.ReadTestInput()
+        #motortest.StartTest()
+        motortest.Case_Continue()
 
     def DOATest(self):
         print('DOATest')
@@ -211,7 +212,9 @@ class MotorTester(object):
             print('A low speed and Leftmost degree rotate in ' + str(i) + ' times')     
             self.client.exec_command(command2)  
             time.sleep(7)   
-            
+    def Case_Continue(self):
+        for i in range(2000):
+            self.Case_HorizontalMax()
 
 
 class MotorController(object):
@@ -272,9 +275,10 @@ class MotorController(object):
 
 bot1 = bot_device('192.168.51.169')
 bot2 = bot_device('192.168.50.27')
+bot3 = bot_device('192.168.50.198')
 
-mode = ['Audio', 'Motor', 'Thermal']
-bottest = bot_test(mode, bot2)
+mode = ['Motor']
+bottest = bot_test(mode, bot3)
 bottest.connect()
 
 bottest.ModeTest()

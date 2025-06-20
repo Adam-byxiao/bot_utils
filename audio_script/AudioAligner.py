@@ -243,7 +243,7 @@ class AudioAlignerApp(wx.Frame):
         wx.MessageBox("音频对齐处理完成!", "完成", wx.OK|wx.ICON_INFORMATION)
 
 class AudioAlignerWorker(Thread):
-    def __init__(self, original_path, audio_files, output_folder, parent = None):
+    def __init__(self, original_path, audio_files, output_folder, parent=None):
         Thread.__init__(self)
         self.original_path = original_path
         self.audio_files = audio_files
@@ -261,12 +261,11 @@ class AudioAlignerWorker(Thread):
             pub.sendMessage("log", message=message)
             if self.parent:
                 pub.sendMessage("output", message=message)
-
-            pub.sendMessage("log", message=f"开始处理 {len(self.audio_files)} 个音频文件...")
             
             # 加载原始音频
             original_audio, sr_orig = sf.read(self.original_path, always_2d=True)
-            pub.sendMessage("log", message=f"已加载原始参考音频: {self.original_path}")
+            original_length = len(original_audio)
+            pub.sendMessage("log", message=f"已加载原始参考音频: {self.original_path} (长度: {original_length}帧)")
             
             total_files = len(self.audio_files)
             for i, input_file in enumerate(self.audio_files):
@@ -276,61 +275,64 @@ class AudioAlignerWorker(Thread):
                 filename = os.path.basename(input_file)
                 pub.sendMessage("log", message=f"\n处理文件 {i+1}/{total_files}: {filename}")
                 
-                if self.parent:
-                    pub.sendMessage("output", message=message)
-                
                 try:
                     # 加载录制音频
                     recorded_audio, sr_rec = sf.read(input_file, always_2d=True)
                     
                     # 检查采样率
                     if sr_orig != sr_rec:
+                        print(sr_orig, '    ', sr_rec)
                         pub.sendMessage("log", message=f"警告: 采样率不匹配 ({sr_rec}Hz), 将直接处理")
                     
                     # 找到对齐偏移量
                     offset = self.find_alignment_offset(original_audio, recorded_audio)
                     pub.sendMessage("log", message=f"找到对齐偏移量: {offset} 样本点 ({offset/sr_orig:.3f}秒)")
                     
-                    # 创建时间轴平移后的音频
-                    if offset >= 0:
-                        aligned_audio = recorded_audio[offset:]
-                    else:
-                        aligned_audio = np.concatenate([
-                            np.zeros((-offset, recorded_audio.shape[1]) if recorded_audio.ndim > 1 else np.zeros(-offset),
-                            recorded_audio)
-                        ])
+                    # 精确裁剪音频 (关键修改部分)
+                    start_idx = max(0, offset)
+                    end_idx = min(start_idx + original_length, len(recorded_audio))
                     
-                    # 保持与原始音频相同的长度
-                    aligned_audio = aligned_audio[:len(original_audio)]
+                    if end_idx <= start_idx:
+                        raise ValueError("无效的偏移量，无法对齐音频")
+                    
+                    aligned_audio = recorded_audio[start_idx:end_idx]
+                    
+                    # 确保长度匹配 (不足时补零)
+                    if len(aligned_audio) < original_length:
+                        padding = original_length - len(aligned_audio)
+                        if recorded_audio.ndim == 1:
+                            aligned_audio = np.concatenate([aligned_audio, np.zeros(padding)])
+                        else:
+                            aligned_audio = np.concatenate([
+                                aligned_audio, 
+                                np.zeros((padding, recorded_audio.shape[1]))
+                            ])
+                    
+                    # 验证长度
+                    assert len(aligned_audio) == original_length, "长度匹配失败"
                     
                     # 保存结果
-                    output_path = os.path.join(self.output_folder, f"aligned_{filename}")
+                    output_path = os.path.join(self.output_folder, f"{filename}")
                     sf.write(output_path, aligned_audio, sr_orig)
-                    pub.sendMessage("log", message=f"已保存对齐后的音频: {output_path}")
+                    pub.sendMessage("log", message=f"已保存对齐后的音频: {output_path} (长度: {len(aligned_audio)}帧)")
                     
                 except Exception as e:
                     pub.sendMessage("log", message=f"处理文件 {filename} 时出错: {str(e)}")
                 
                 # 更新进度
                 progress = int((i + 1) / total_files * 100)
-                pub.sendMessage("log", message=f"进度: {progress}%")
-                wx.CallAfter(pub.sendMessage, "progress", value=progress)
+                pub.sendMessage("progress", value=progress)
             
             if not self._stop:
-                #pub.sendMessage("log", message="\n所有文件处理完成!")
+                pub.sendMessage("log", message="\n所有文件处理完成!")
                 wx.CallAfter(pub.sendMessage, "worker_finished")
-                if self.parent:
-                    pub.sendMessage("output", message=message)
         
         except Exception as e:
             pub.sendMessage("log", message=f"处理过程中发生错误: {str(e)}")
             wx.CallAfter(pub.sendMessage, "worker_finished")
-            if self.parent:
-                pub.sendMessage("output", message=message)
-    
+
     def find_alignment_offset(self, original, recorded):
         """找到录制音频与原始音频的最佳对齐偏移量"""
-        # 使用互相关计算对齐位置（多通道处理）
         if original.ndim == 1:
             original = original.reshape(-1, 1)
         if recorded.ndim == 1:
@@ -345,8 +347,7 @@ class AudioAlignerWorker(Thread):
             else:
                 total_corr += corr
         
-        best_offset = np.argmax(total_corr)
-        return best_offset
+        return np.argmax(total_corr)
 
 if __name__ == "__main__":
     app = wx.App(False)
