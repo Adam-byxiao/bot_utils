@@ -70,7 +70,6 @@ bot_utils/
 pip install wxPython librosa matplotlib scipy pesq openpyxl
 ```
 - Windows 下可用 pip 安装 wxPython。
-- 若遇到 wxPython 安装问题，请参考 [wxPython 官网](https://wxpython.org/pages/downloads/)。
 
 ## 运行方法
 
@@ -103,7 +102,6 @@ pip install wxPython librosa matplotlib scipy pesq openpyxl
 - 结果直方图  
   ![histogram](docs/screenshot_hist.png)
 
-> *（请将实际运行截图保存到 docs/ 目录并替换上述图片）*
 
 ## 参考/致谢
 
