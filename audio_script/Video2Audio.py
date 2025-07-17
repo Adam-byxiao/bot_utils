@@ -8,11 +8,11 @@ ffmpeg_path = "D:/software/ffmpeg/bin/ffmpeg.exe"
 
 class AudioConverterApp(wx.Frame):
     def __init__(self, parent=None):  # 添加parent参数
-        super().__init__(parent, title="MP4 转 WAV 转换器", size=(800, 600))
+        super().__init__(parent, title="MP4 转 WAV 转换器", size=wx.Size(800, 600))
         self.parent = parent  # 保存主窗口引用
         
         self.panel = wx.Panel(self)
-        self.SetMinSize((400, 250))
+        self.SetMinSize(wx.Size(400, 250))
         
         # 初始化界面
         self.init_ui()
@@ -74,7 +74,13 @@ class AudioConverterApp(wx.Frame):
         
         self.channels = wx.ComboBox(self.panel, choices=["1 (单声道)", "2 (立体声)"], value="2 (立体声)")
         param_sizer.Add(self.channels)
-        
+
+        # 新增递归和删除原文件的CheckBox
+        self.recursive_checkbox = wx.CheckBox(self.panel, label="递归处理所有子文件夹")
+        self.recursive_checkbox.SetValue(True)
+        self.delete_checkbox = wx.CheckBox(self.panel, label="转化后自动删除原视频文件（mp4/m4a）")
+        self.delete_checkbox.SetValue(True)
+
         # 转换按钮
         self.convert_btn = wx.Button(self.panel, label="开始转换")
         self.convert_btn.Bind(wx.EVT_BUTTON, self.on_convert)
@@ -86,6 +92,8 @@ class AudioConverterApp(wx.Frame):
         vbox.Add(input_sizer, flag=wx.EXPAND|wx.ALL, border=10)
         vbox.Add(output_sizer, flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, border=10)
         vbox.Add(param_sizer, flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, border=10)
+        vbox.Add(self.recursive_checkbox, flag=wx.LEFT|wx.RIGHT|wx.BOTTOM, border=10)
+        vbox.Add(self.delete_checkbox, flag=wx.LEFT|wx.RIGHT|wx.BOTTOM, border=10)
         vbox.Add(self.convert_btn, flag=wx.ALIGN_CENTER|wx.BOTTOM, border=10)
         vbox.Add(self.log, proportion=1, flag=wx.EXPAND|wx.LEFT|wx.RIGHT|wx.BOTTOM, border=10)
         
@@ -167,6 +175,8 @@ class AudioConverterApp(wx.Frame):
         try:
             sample_rate = int(self.sample_rate.GetValue())
             channels = int(self.channels.GetValue()[0])
+            recursive = self.recursive_checkbox.GetValue()
+            delete_original = self.delete_checkbox.GetValue()
             
             self.log.AppendText(f"开始转换: {input_folder} -> {output_folder}\n")
             
@@ -174,7 +184,7 @@ class AudioConverterApp(wx.Frame):
             input_folder = self.fix_path(input_folder)
             output_folder = self.fix_path(output_folder)
             
-            self.convert_mp4_to_wav(input_folder, output_folder, sample_rate, channels)
+            self.convert_mp4_to_wav(input_folder, output_folder, sample_rate, channels, recursive, delete_original)
             self.log.AppendText("转换完成!\n\n")
             #wx.MessageBox("转换完成!", "完成", wx.OK|wx.ICON_INFORMATION)
             if self.parent:
@@ -195,19 +205,25 @@ class AudioConverterApp(wx.Frame):
         return path
 
     
-    def convert_mp4_to_wav(self, input_folder, output_folder=None, sample_rate=44100, channels=2):
-        """实际的转换函数"""
+    def convert_mp4_to_wav(self, input_folder, output_folder=None, sample_rate=44100, channels=2, recursive=True, delete_original=True):
+        """实际的转换函数，支持递归和删除原文件"""
         if output_folder is None:
             output_folder = input_folder
         else:
             os.makedirs(output_folder, exist_ok=True)
-            # 获取文件列表
 
-        # 获取所有支持的输入文件（MP4 和 M4A）
         supported_extensions = ('.mp4', '.m4a')
-        input_files = [f for f in os.listdir(input_folder) 
-                      if f.lower().endswith(supported_extensions)]
-        total_files = len(input_files)
+        file_list = []
+        if recursive:
+            for root, dirs, files in os.walk(input_folder):
+                for f in files:
+                    if f.lower().endswith(supported_extensions):
+                        file_list.append((root, f))
+        else:
+            for f in os.listdir(input_folder):
+                if f.lower().endswith(supported_extensions):
+                    file_list.append((input_folder, f))
+        total_files = len(file_list)
 
         if total_files == 0:
             message = "未找到支持的音频/视频文件(支持 .mp4 和 .m4a)"
@@ -221,45 +237,53 @@ class AudioConverterApp(wx.Frame):
         if self.parent:
             pub.sendMessage("output", message=message)
         
-        for i, filename in enumerate(input_files):
-            input_path = os.path.join(input_folder, filename)
+        for i, (root, filename) in enumerate(file_list):
+            input_path = os.path.join(root, filename)
+            # 输出目录结构与输入保持一致
+            rel_dir = os.path.relpath(root, input_folder)
+            out_dir = os.path.join(output_folder, rel_dir) if rel_dir != '.' else output_folder
+            os.makedirs(out_dir, exist_ok=True)
             output_filename = os.path.splitext(filename)[0] + '.wav'
-            output_path = os.path.join(output_folder, output_filename)
+            output_path = os.path.join(out_dir, output_filename)
 
             # 修正路径格式
             inputpath = self.fix_path(input_path)
             outputpath = self.fix_path(output_path)
 
-            # 构建 FFmpeg 命令（兼容 MP4 和 M4A）
             command = [
                 ffmpeg_path,
                 '-i', inputpath,
-                '-vn',              # 禁用视频流
-                '-acodec', 'pcm_s16le',  # WAV 编码
+                '-vn',
+                '-acodec', 'pcm_s16le',
                 '-ar', str(sample_rate),
                 '-ac', str(channels),
-                '-y',               # 覆盖输出文件
+                '-y',
                 outputpath
             ]
 
             try:
-                message = f"正在处理文件 {i+1}/{total_files}: {filename}"
+                message = f"正在处理文件 {i+1}/{total_files}: {os.path.join(rel_dir, filename) if rel_dir != '.' else filename}"
                 self.log.AppendText(message + "\n")
                 if self.parent:
                     pub.sendMessage("output", message=message)
 
-                # 执行命令
                 process = subprocess.run(
                     command,
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE,
                     text=True,
                     encoding='utf-8',
-                    errors='replace'  # 处理编码问题
+                    errors='replace'
                 )
 
                 if process.returncode == 0:
-                    message = f"转换成功: {output_filename}"
+                    message = f"转换成功: {os.path.join(rel_dir, output_filename) if rel_dir != '.' else output_filename}"
+                    if delete_original:
+                        try:
+                            os.remove(input_path)
+                            message += "，已删除原文件"
+                        except Exception as e:
+                            message += f"，删除原文件失败: {str(e)}"
                 else:
                     message = f"转换失败: {filename} (错误: {process.stderr.strip()})"
 
@@ -267,7 +291,6 @@ class AudioConverterApp(wx.Frame):
                 if self.parent:
                     pub.sendMessage("output", message=message)
 
-                # 更新进度
                 progress = int((i + 1) / total_files * 100)
                 if self.parent:
                     pub.sendMessage("progress", value=progress)
@@ -278,7 +301,6 @@ class AudioConverterApp(wx.Frame):
                 if self.parent:
                     pub.sendMessage("output", message=message)
 
-        # 完成处理
         message = "所有文件处理完成!"
         self.log.AppendText(message + "\n")
         if self.parent:

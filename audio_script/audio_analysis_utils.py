@@ -32,10 +32,13 @@ def calc_match_gain(test_audio, ref_audio, eps=1e-8):
 
 # SNR计算
 def calculate_snr(ref_audio, test_audio):
-    signal_rms = calculate_rms(ref_audio)
-    total_rms = calculate_rms(test_audio)
-    noise_rms = np.sqrt(max(total_rms**2 - signal_rms**2, 1e-12))
-    return 20 * np.log10(signal_rms / noise_rms) if noise_rms > 0 else float('inf')
+    min_len = min(len(ref_audio), len(test_audio))
+    ref = ref_audio[:min_len]
+    test = test_audio[:min_len]
+    noise = test - ref
+    signal_power = np.sum(ref ** 2)
+    noise_power = np.sum(noise ** 2) + 1e-12
+    return 10 * np.log10(signal_power / noise_power)
 
 # PESQ主流程（自动采样率、增益归一化、长度对齐）
 def pesq_score(ref_path, deg_path, method='cc'):

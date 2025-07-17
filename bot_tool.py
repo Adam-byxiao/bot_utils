@@ -275,7 +275,7 @@ class MotorController(object):
 
 bot1 = bot_device('192.168.51.169')
 bot2 = bot_device('192.168.50.27')
-bot3 = bot_device('192.168.50.198')
+bot3 = bot_device('192.168.51.113')
 
 mode = ['Motor']
 bottest = bot_test(mode, bot3)
