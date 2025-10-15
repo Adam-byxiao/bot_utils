@@ -109,7 +109,7 @@ class KWSLogParser:
         # 正则表达式模式
         self.kws_pattern = re.compile(
             r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z).*?'
-            r'Model: (\w+) recognized phrase: (\w+), score: ([\d.]+), begin: (\d+), end: (\d+)'
+            r'Model: (\w+) recognized phrase: (\w+), score: ([\d.]+), begin: ([\d.e+-]+), end: ([\d.e+-]+)'
         )
         
         self.save_record_pattern = re.compile(
@@ -132,8 +132,8 @@ class KWSLogParser:
                 'model': model,
                 'phrase': phrase,
                 'score': float(score),
-                'begin': int(begin),
-                'end': int(end),
+                'begin': int(float(begin)),  # 支持科学计数法
+                'end': int(float(end)),      # 支持科学计数法
                 'raw_log': line.strip()
             }
         return None
@@ -175,6 +175,7 @@ class KWSCalculator:
         self.untriggered_records = []
         self.monitoring = False
         self.output_dir = "kws_output"
+        self.connection_start_time = None  # 记录连接开始时间
         
         # 创建输出目录
         os.makedirs(self.output_dir, exist_ok=True)
@@ -194,7 +195,10 @@ class KWSCalculator:
             return
         
         self.monitoring = True
+        # 记录监控开始时间（UTC时间）
+        self.connection_start_time = datetime.utcnow()
         logger.info(f"开始监控日志文件: {log_file_path}")
+        logger.info(f"监控开始时间: {self.connection_start_time.isoformat()}Z")
         
         try:
             # 使用tail -f命令持续监控日志
@@ -221,6 +225,11 @@ class KWSCalculator:
         # 解析KWS识别行
         kws_data = self.parser.parse_kws_line(line)
         if kws_data:
+            # 检查时间戳是否在连接后
+            if not self._is_after_connection(kws_data['timestamp']):
+                logger.debug(f"忽略连接前的KWS识别记录: {kws_data['timestamp']}")
+                return
+                
             logger.info(f"检测到KWS识别: phrase={kws_data['phrase']}, score={kws_data['score']}")
             
             # 创建记录
@@ -239,6 +248,11 @@ class KWSCalculator:
         # 解析SaveRecord行（未触发）
         save_data = self.parser.parse_save_record_line(line)
         if save_data:
+            # 检查时间戳是否在连接后
+            if not self._is_after_connection(save_data['timestamp']):
+                logger.debug(f"忽略连接前的未触发记录: {save_data['timestamp']}")
+                return
+                
             logger.info(f"检测到未触发记录: phrase={save_data['phrase']}")
             self._update_trigger_status(save_data['phrase'], False, save_data['timestamp'])
             return
@@ -246,6 +260,11 @@ class KWSCalculator:
         # 解析Triggered行（已触发）
         triggered_data = self.parser.parse_triggered_line(line)
         if triggered_data:
+            # 检查时间戳是否在连接后
+            if not self._is_after_connection(triggered_data['timestamp']):
+                logger.debug(f"忽略连接前的触发记录: {triggered_data['timestamp']}")
+                return
+                
             logger.info(f"检测到触发记录: phrase={triggered_data['phrase']}")
             self._update_trigger_status(triggered_data['phrase'], True, triggered_data['timestamp'])
             return
@@ -277,6 +296,20 @@ class KWSCalculator:
             return abs((dt1 - dt2).total_seconds())
         except:
             return 0
+    
+    def _is_after_connection(self, timestamp: str) -> bool:
+        """检查时间戳是否在连接开始时间之后"""
+        if not self.connection_start_time:
+            return True  # 如果没有记录连接时间，则不过滤
+        
+        try:
+            log_time = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+            # 转换为UTC时间进行比较
+            log_time_utc = log_time.replace(tzinfo=None)
+            return log_time_utc >= self.connection_start_time
+        except Exception as e:
+            logger.warning(f"时间戳解析失败: {timestamp}, 错误: {e}")
+            return True  # 解析失败时不过滤
     
     def stop_monitoring(self):
         """停止监控"""

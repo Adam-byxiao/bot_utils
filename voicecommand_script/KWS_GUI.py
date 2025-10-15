@@ -628,45 +628,123 @@ class KWSMainFrame(wx.Frame):
     def monitoring_worker(self):
         """监控工作线程"""
         try:
-            # 重写KWS计算器的处理方法以集成GUI
+            # 保存原始方法
             original_process_line = self.kws_calculator._process_log_line
+            original_update_trigger = self.kws_calculator._update_trigger_status
+            
+            # 记录已处理的记录数量
+            processed_kws_count = 0
+            processed_triggered_count = 0
+            processed_untriggered_count = 0
             
             def gui_process_line(line):
+                nonlocal processed_kws_count, processed_triggered_count, processed_untriggered_count
+                
+                # 添加调试信息
+                if self.output_panel.debug_mode:
+                    wx.CallAfter(self.output_panel.append_log, f"处理日志行: {line.strip()}")
+                
                 # 调用原始处理方法
                 original_process_line(line)
                 
-                # 检查是否有新记录
-                if self.kws_calculator.records:
-                    latest_record = self.kws_calculator.records[-1]
+                # 检查是否有新的KWS识别记录
+                current_kws_count = len(self.kws_calculator.records)
+                if current_kws_count > processed_kws_count:
+                    # 处理新增的KWS识别记录
+                    for i in range(processed_kws_count, current_kws_count):
+                        record = self.kws_calculator.records[i]
+                        self.records.append(record)
+                        
+                        # 输出识别日志
+                        wx.CallAfter(self.output_panel.append_log,
+                                   f"第 {len(self.records)} 次识别: {record.phrase}, 分数: {record.score:.4f}")
+                        
+                        if self.output_panel.debug_mode:
+                            wx.CallAfter(self.output_panel.append_log,
+                                       f"详细: 时间={record.timestamp}, begin={record.begin_time}, end={record.end_time}")
                     
-                    # 检查是否是新记录
-                    if latest_record not in self.records:
-                        self.records.append(latest_record)
+                    processed_kws_count = current_kws_count
+            
+            def gui_update_trigger(phrase, triggered, timestamp):
+                nonlocal processed_triggered_count, processed_untriggered_count
+                
+                # 调用原始方法
+                original_update_trigger(phrase, triggered, timestamp)
+                
+                # 检查触发记录和未触发记录的变化
+                current_triggered = len(self.kws_calculator.triggered_records)
+                current_untriggered = len(self.kws_calculator.untriggered_records)
+                
+                # 处理新的触发记录
+                if current_triggered > processed_triggered_count:
+                    for i in range(processed_triggered_count, current_triggered):
+                        record = self.kws_calculator.triggered_records[i]
+                        
+                        # 如果这个记录不在我们的记录列表中，添加它
+                        if record not in self.records:
+                            self.records.append(record)
+                            wx.CallAfter(self.output_panel.append_log,
+                                       f"第 {len(self.records)} 次识别: {record.phrase}, 分数: {record.score:.4f}")
                         
                         # 更新统计
                         wx.CallAfter(self.stats_panel.update_stats, 
-                                   latest_record.phrase, 
-                                   latest_record.score, 
-                                   latest_record.triggered)
+                                   record.phrase, 
+                                   record.score, 
+                                   True)
                         
-                        # 输出日志
-                        if self.output_panel.debug_mode:
+                        # 输出触发状态日志
+                        wx.CallAfter(self.output_panel.append_log,
+                                   f"状态更新: {phrase} - 触发")
+                    
+                    processed_triggered_count = current_triggered
+                
+                # 处理新的未触发记录
+                if current_untriggered > processed_untriggered_count:
+                    for i in range(processed_untriggered_count, current_untriggered):
+                        record = self.kws_calculator.untriggered_records[i]
+                        
+                        # 如果这个记录不在我们的记录列表中，添加它
+                        if record not in self.records:
+                            self.records.append(record)
                             wx.CallAfter(self.output_panel.append_log,
-                                       f"识别: {latest_record.phrase}, 分数: {latest_record.score:.4f}, "
-                                       f"触发: {'是' if latest_record.triggered else '否'}")
-                        else:
-                            wx.CallAfter(self.output_panel.append_log,
-                                       f"第 {len(self.records)} 次识别")
+                                       f"第 {len(self.records)} 次识别: {record.phrase}, 分数: {record.score:.4f}")
+                        
+                        # 更新统计
+                        wx.CallAfter(self.stats_panel.update_stats, 
+                                   record.phrase, 
+                                   record.score, 
+                                   False)
+                        
+                        # 输出触发状态日志
+                        wx.CallAfter(self.output_panel.append_log,
+                                   f"状态更新: {phrase} - 未触发")
+                    
+                    processed_untriggered_count = current_untriggered
             
             # 替换处理方法
             self.kws_calculator._process_log_line = gui_process_line
+            self.kws_calculator._update_trigger_status = gui_update_trigger
             
             # 开始监控
+            wx.CallAfter(self.output_panel.append_log, "开始监控日志...")
+            
+            # 显示连接时间戳信息
+            if hasattr(self.kws_calculator, 'connection_start_time') and self.kws_calculator.connection_start_time:
+                start_time_str = self.kws_calculator.connection_start_time.isoformat() + 'Z'
+                wx.CallAfter(self.output_panel.append_log, f"连接时间戳: {start_time_str}")
+                wx.CallAfter(self.output_panel.append_log, "注意: 将忽略连接前的历史记录")
+            
             self.kws_calculator.start_monitoring()
             
         except Exception as e:
             wx.CallAfter(self.output_panel.append_log, f"监控错误: {str(e)}")
             wx.CallAfter(self.SetStatusText, "监控错误")
+        finally:
+            # 恢复原始方法
+            if 'original_process_line' in locals():
+                self.kws_calculator._process_log_line = original_process_line
+            if 'original_update_trigger' in locals():
+                self.kws_calculator._update_trigger_status = original_update_trigger
     
     def show_final_stats(self):
         """显示最终统计"""
