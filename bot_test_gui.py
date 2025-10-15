@@ -1,8 +1,8 @@
 import wx
 from bot_tool_framework import Device, TEST_REGISTRY
 # 显式导入所有测试类，确保注册
-from bot_tests.audio_test import AudioTest
-from bot_tests.camera_test import CameraTest
+#from bot_tests.audio_test import AudioTest
+#from bot_tests.camera_test import CameraTest
 from bot_tests.media_test import MediaTest
 from bot_tests.motor_test import MotorTest
 from bot_tests.doa_test import DOATest

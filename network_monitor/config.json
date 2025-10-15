@@ -1,0 +1,16 @@
+{
+  "chrome_host": "localhost",
+  "chrome_port": 9222,
+  "session_id": "demo_session",
+  "output_dir": "./output",
+  "filters": {
+    "exclude_static_resources": true,
+    "api_only": false,
+    "exclude_status_codes": [404, 500],
+    "include_domains": []
+  },
+  "export": {
+    "formats": ["json", "csv", "txt"],
+    "include_summary": true
+  }
+}

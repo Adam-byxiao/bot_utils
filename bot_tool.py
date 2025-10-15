@@ -70,7 +70,7 @@ class bot_test():
                 time.sleep(1)
                 retries -= 1
 
-        logging.error(f'Failed to connect to {self.ip}')
+        logging.error(f'Failed to connect to {self.device.ip}')
         return False
 
     def AudioTest(self):
@@ -250,7 +250,7 @@ class MotorController(object):
         self.ac = ac
         self.dc = dc
         return command
-    
+                                                                                                                                                                                                                                                                                                                                                                                          
     #check the result of rotation-degree, return true/false
     def MotorCheckResultDegree(self, command):
 

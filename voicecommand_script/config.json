@@ -1,0 +1,23 @@
+{
+  "ssh_connection": {
+    "host": "192.168.1.100",
+    "username": "root",
+    "password": "test0000",
+    "port": 22
+  },
+  "log_monitoring": {
+    "log_file_path": "/var/log/vibe-ai/vibe-ai.LATEST",
+    "monitoring_interval": 0.1,
+    "timeout_seconds": 5
+  },
+  "output_settings": {
+    "output_directory": "kws_output",
+    "export_formats": ["json", "csv"],
+    "auto_export_interval": 300
+  },
+  "parsing_settings": {
+    "phrase_patterns": ["hello_vibe", "hey_vibe"],
+    "score_threshold": 0.8,
+    "time_window_seconds": 5
+  }
+}
