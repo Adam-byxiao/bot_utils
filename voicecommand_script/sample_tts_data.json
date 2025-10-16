@@ -1,0 +1,50 @@
+[
+  {
+    "filename": "negative_001_hello_system_20251015_081220_500.wav",
+    "sample_type": "negative",
+    "speaker_id": "001",
+    "text": "hello_system",
+    "audio_type": "original",
+    "timestamp": "2025/10/15 08:12:20.500"
+  },
+  {
+    "filename": "positive_002_hello_vibe_20251015_081221_000.wav",
+    "sample_type": "positive",
+    "speaker_id": "002",
+    "text": "hello_vibe",
+    "audio_type": "original",
+    "timestamp": "2025/10/15 08:12:21.000"
+  },
+  {
+    "filename": "positive_003_hey_vibe_20251015_081223_800.wav",
+    "sample_type": "positive",
+    "speaker_id": "003",
+    "text": "hey_vibe",
+    "audio_type": "original",
+    "timestamp": "2025/10/15 08:12:23.800"
+  },
+  {
+    "filename": "negative_004_hello_system_20251015_081229_900.wav",
+    "sample_type": "negative",
+    "speaker_id": "004",
+    "text": "hello_system",
+    "audio_type": "original",
+    "timestamp": "2025/10/15 08:12:29.900"
+  },
+  {
+    "filename": "positive_005_hello_vibe_20251015_081230_000.wav",
+    "sample_type": "positive",
+    "speaker_id": "005",
+    "text": "hello_vibe",
+    "audio_type": "original",
+    "timestamp": "2025/10/15 08:12:30.000"
+  },
+  {
+    "filename": "negative_006_wrong_phrase_20251015_081234_500.wav",
+    "sample_type": "negative",
+    "speaker_id": "006",
+    "text": "wrong_phrase",
+    "audio_type": "original",
+    "timestamp": "2025/10/15 08:12:34.500"
+  }
+]

@@ -1,0 +1,98 @@
+[
+  {
+    "filename": "negative_098_helllo_system_20251016_152122_758.wav",
+    "sample_type": "negative",
+    "speaker_id": "098",
+    "text": "helllo_system",
+    "audio_type": "original",
+    "timestamp": "2025/10/16 15:21:22.758"
+  },
+  {
+    "filename": "positive_059_hey_vibe_20251016_152124_764.wav",
+    "sample_type": "positive",
+    "speaker_id": "059",
+    "text": "hey_vibe",
+    "audio_type": "original",
+    "timestamp": "2025/10/16 15:21:24.764"
+  },
+  {
+    "filename": "negative_100_helllo_system_20251016_152126_767.wav",
+    "sample_type": "negative",
+    "speaker_id": "100",
+    "text": "helllo_system",
+    "audio_type": "original",
+    "timestamp": "2025/10/16 15:21:26.767"
+  },
+  {
+    "filename": "positive_046_hey_vibe_20251016_152128_763.wav",
+    "sample_type": "positive",
+    "speaker_id": "046",
+    "text": "hey_vibe",
+    "audio_type": "original",
+    "timestamp": "2025/10/16 15:21:28.763"
+  },
+  {
+    "filename": "negative_051_helllo_system_20251016_152130_764.wav",
+    "sample_type": "negative",
+    "speaker_id": "051",
+    "text": "helllo_system",
+    "audio_type": "original",
+    "timestamp": "2025/10/16 15:21:30.764"
+  },
+  {
+    "filename": "negative_092_helllo_system_20251016_152132_754.wav",
+    "sample_type": "negative",
+    "speaker_id": "092",
+    "text": "helllo_system",
+    "audio_type": "original",
+    "timestamp": "2025/10/16 15:21:32.754"
+  },
+  {
+    "filename": "positive_073_hey_vibe_20251016_152134_759.wav",
+    "sample_type": "positive",
+    "speaker_id": "073",
+    "text": "hey_vibe",
+    "audio_type": "original",
+    "timestamp": "2025/10/16 15:21:34.759"
+  },
+  {
+    "filename": "negative_090_helllo_system_20251016_152136_763.wav",
+    "sample_type": "negative",
+    "speaker_id": "090",
+    "text": "helllo_system",
+    "audio_type": "original",
+    "timestamp": "2025/10/16 15:21:36.763"
+  },
+  {
+    "filename": "positive_106_hey_vibe_20251016_152138_766.wav",
+    "sample_type": "positive",
+    "speaker_id": "106",
+    "text": "hey_vibe",
+    "audio_type": "original",
+    "timestamp": "2025/10/16 15:21:38.766"
+  },
+  {
+    "filename": "positive_057_hey_vibe_20251016_152140_776.wav",
+    "sample_type": "positive",
+    "speaker_id": "057",
+    "text": "hey_vibe",
+    "audio_type": "original",
+    "timestamp": "2025/10/16 15:21:40.776"
+  },
+  {
+    "filename": "positive_106_hey_vibe_20251016_152142_775.wav",
+    "sample_type": "positive",
+    "speaker_id": "106",
+    "text": "hey_vibe",
+    "audio_type": "original",
+    "timestamp": "2025/10/16 15:21:42.775"
+  },
+  {
+    "filename": "negative_025_helllo_system_20251016_152144_772.wav",
+    "sample_type": "negative",
+    "speaker_id": "025",
+    "text": "helllo_system",
+    "audio_type": "original",
+    "timestamp": "2025/10/16 15:21:44.772"
+  }
+]
