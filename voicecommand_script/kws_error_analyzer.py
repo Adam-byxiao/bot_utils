@@ -9,7 +9,7 @@ import json
 import csv
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Dict, Tuple, Optional
 import logging
 
@@ -21,6 +21,7 @@ class KWSErrorAnalyzer:
         self.tts_records = []
         self.kws_records = []
         self.error_records = []
+        self.mismatch_records = []  # 新增：时间戳不匹配的记录
         self.setup_logging()
     
     def setup_logging(self):
@@ -98,9 +99,13 @@ class KWSErrorAnalyzer:
                 return datetime.strptime(timestamp_str, "%Y/%m/%d %H:%M:%S.%f")
             elif format_type == 'kws':
                 # KWS格式: "2025-10-15T08:12:21.340056Z"
-                # 移除末尾的Z并解析
+                # 末尾的Z表示这是UTC时间，需要转换为北京时间（UTC+8）
                 timestamp_str = timestamp_str.rstrip('Z')
-                return datetime.fromisoformat(timestamp_str)
+                kws_time_utc = datetime.fromisoformat(timestamp_str)
+                # UTC时间转换为北京时间（+8小时）
+                kws_time_beijing = kws_time_utc + timedelta(hours=8)
+                self.logger.debug(f"KWS时区转换: {kws_time_utc} (UTC) -> {kws_time_beijing} (北京时间)")
+                return kws_time_beijing
         except Exception as e:
             self.logger.error(f"时间戳解析失败: {timestamp_str}, 错误: {e}")
             raise
@@ -108,7 +113,8 @@ class KWSErrorAnalyzer:
     def is_timestamp_match(self, tts_time: datetime, kws_time: datetime) -> bool:
         """
         检查时间戳是否匹配
-        TTS播放时间应该在KWS识别时间之前，且差值不超过1秒
+        TTS播放时间应该在KWS识别时间之前，且差值不超过2秒
+        考虑到声音传播、处理延迟等因素，将阈值设为2秒
         
         Args:
             tts_time: TTS播放时间
@@ -118,7 +124,7 @@ class KWSErrorAnalyzer:
             bool: 时间戳是否匹配
         """
         time_diff = (kws_time - tts_time).total_seconds()
-        return 0 <= time_diff <= 1.0
+        return 0 <= time_diff <= 2.0
     
     def normalize_text(self, text: str) -> str:
         """
@@ -187,15 +193,87 @@ class KWSErrorAnalyzer:
                     break
                     
                 else:
-                    # TTS时间早于KWS时间但差值超过1秒，TTS向下一位
-                    tts_index += 1
+                    # TTS时间早于KWS时间但差值超过阈值
+                    time_diff = (kws_time - tts_time).total_seconds()
+                    
+                    if time_diff > 10.0:  # 如果时间差超过10秒，跳过TTS记录
+                        # TTS记录没有对应的KWS记录
+                        mismatch_record = {
+                            'kws_timestamp': '',
+                            'kws_phrase': '',
+                            'kws_score': '',
+                            'kws_triggered': '',
+                            'tts_text': tts_record['text'],
+                            'tts_time': tts_record['timestamp'],
+                            'error_type': 'tts_no_kws_match'
+                        }
+                        self.mismatch_records.append(mismatch_record)
+                        tts_index += 1
+                    else:
+                        # 时间差较小但不匹配，记录为时间戳不匹配
+                        mismatch_record = {
+                            'kws_timestamp': kws_record['时间戳'],
+                            'kws_phrase': kws_record['提示词'],
+                            'kws_score': kws_record['分数'],
+                            'kws_triggered': kws_record['是否触发'],
+                            'tts_text': tts_record['text'],
+                            'tts_time': tts_record['timestamp'],
+                            'error_type': 'timestamp_mismatch'
+                        }
+                        self.mismatch_records.append(mismatch_record)
+                        
+                        # 推进较早的时间戳
+                        if tts_time < kws_time:
+                            tts_index += 1
+                        else:
+                            kws_index += 1
                     
             except Exception as e:
                 self.logger.error(f"分析记录时出错: {e}")
                 tts_index += 1
                 kws_index += 1
         
-        self.logger.info(f"分析完成，发现错误记录: {len(self.error_records)} 条")
+        # 处理剩余的TTS记录（如果KWS记录已经处理完）
+        while tts_index < len(self.tts_records):
+            tts_record = self.tts_records[tts_index]
+            error_msg = f"剩余TTS记录无对应KWS记录: TTS时间({tts_record['timestamp']})"
+            self.logger.error(f"ERROR: TTS数据错误 - {error_msg}")
+            print(f"ERROR: TTS数据错误 - {error_msg}")
+            
+            # 记录剩余的TTS数据为不匹配
+            mismatch_record = {
+                'kws_timestamp': '',  # 没有对应的KWS记录
+                'kws_phrase': '',
+                'kws_score': '',
+                'kws_triggered': '',
+                'tts_text': tts_record['text'],
+                'tts_time': tts_record['timestamp'],
+                'error_type': 'tts_no_kws_match'
+            }
+            self.mismatch_records.append(mismatch_record)
+            tts_index += 1
+        
+        # 处理剩余的KWS记录（如果TTS记录已经处理完）
+        while kws_index < len(self.kws_records):
+            kws_record = self.kws_records[kws_index]
+            error_msg = f"剩余KWS记录无对应TTS记录: KWS时间({kws_record['时间戳']})"
+            self.logger.error(f"ERROR: KWS数据错误 - {error_msg}")
+            print(f"ERROR: KWS数据错误 - {error_msg}")
+            
+            # 记录剩余的KWS数据为不匹配
+            mismatch_record = {
+                'kws_timestamp': kws_record['时间戳'],
+                'kws_phrase': kws_record['提示词'],
+                'kws_score': kws_record['分数'],
+                'kws_triggered': kws_record['是否触发'],
+                'tts_text': '',  # 没有对应的TTS记录
+                'tts_time': '',
+                'error_type': 'kws_no_tts_match'
+            }
+            self.mismatch_records.append(mismatch_record)
+            kws_index += 1
+        
+        self.logger.info(f"分析完成，发现错误记录: {len(self.error_records)} 条，时间戳不匹配记录: {len(self.mismatch_records)} 条")
         return self.error_records
     
     def _analyze_content_match(self, tts_record: Dict, kws_record: Dict, 
@@ -265,14 +343,17 @@ class KWSErrorAnalyzer:
             output_file = f"kws_error_analysis_{timestamp}.csv"
         
         try:
+            # 合并错误记录和时间戳不匹配记录
+            all_records = self.error_records + self.mismatch_records
+            
             with open(output_file, 'w', newline='', encoding='utf-8') as f:
-                if self.error_records:
-                    fieldnames = self.error_records[0].keys()
+                if all_records:
+                    fieldnames = all_records[0].keys()
                     writer = csv.DictWriter(f, fieldnames=fieldnames)
                     writer.writeheader()
-                    writer.writerows(self.error_records)
+                    writer.writerows(all_records)
                 else:
-                    # 如果没有错误记录，写入表头
+                    # 如果没有任何记录，写入表头
                     fieldnames = ['error_type', 'kws_timestamp', 'kws_phrase', 'kws_score', 
                                 'kws_triggered', 'tts_text', 'tts_time', 'sample_type']
                     writer = csv.DictWriter(f, fieldnames=fieldnames)
@@ -293,14 +374,17 @@ class KWSErrorAnalyzer:
         self.logger.info(f"TTS记录总数: {len(self.tts_records)}")
         self.logger.info(f"KWS记录总数: {len(self.kws_records)}")
         self.logger.info(f"发现错误记录: {len(self.error_records)}")
+        self.logger.info(f"时间戳不匹配记录: {len(self.mismatch_records)}")
         
-        if self.error_records:
+        # 统计所有记录类型
+        all_records = self.error_records + self.mismatch_records
+        if all_records:
             error_types = {}
-            for record in self.error_records:
+            for record in all_records:
                 error_type = record['error_type']
                 error_types[error_type] = error_types.get(error_type, 0) + 1
             
-            self.logger.info("错误类型统计:")
+            self.logger.info("问题类型统计:")
             for error_type, count in error_types.items():
                 self.logger.info(f"  {error_type}: {count} 条")
         

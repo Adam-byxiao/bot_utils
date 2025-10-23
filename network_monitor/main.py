@@ -19,7 +19,7 @@ import argparse
 from chrome_network_listener import ChromeNetworkListener
 from data_parser import DataParser
 from data_standardizer import DataStandardizer
-from data_filter import DataFilter
+from data_filter import DataFilter, FilterRule
 from data_exporter import DataExporter
 
 # 配置日志
@@ -42,8 +42,8 @@ class NetworkMonitor:
         
         # 初始化组件
         self.listener = ChromeNetworkListener(
-            host=config.get('chrome_host', 'localhost'),
-            port=config.get('chrome_port', 9222)
+            debug_port=config.get('chrome_port', 9222),
+            host=config.get('chrome_host', 'localhost')
         )
         
         self.parser = DataParser()
@@ -66,45 +66,45 @@ class NetworkMonitor:
         
         # 静态资源过滤
         if filter_config.get('exclude_static_resources', True):
-            self.filter.add_rule(
+            self.filter.add_rule(FilterRule(
                 name='exclude_static',
                 rule_type='exclude',
                 pattern=r'\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf)$',
                 field='url'
-            )
+            ))
         
         # API请求过滤
         if filter_config.get('api_only', False):
-            self.filter.add_rule(
+            self.filter.add_rule(FilterRule(
                 name='api_only',
                 rule_type='include',
                 pattern=r'/api/',
                 field='url'
-            )
+            ))
         
         # 状态码过滤
         exclude_status = filter_config.get('exclude_status_codes', [])
         if exclude_status:
             for status in exclude_status:
-                self.filter.add_rule(
+                self.filter.add_rule(FilterRule(
                     name=f'exclude_status_{status}',
                     rule_type='exclude',
                     pattern=str(status),
                     field='status_code'
-                )
+                ))
         
         # 域名过滤
         include_domains = filter_config.get('include_domains', [])
         if include_domains:
             for domain in include_domains:
-                self.filter.add_rule(
+                self.filter.add_rule(FilterRule(
                     name=f'include_domain_{domain}',
                     rule_type='include',
                     pattern=domain,
                     field='domain'
-                )
+                ))
         
-        logger.info(f"过滤器配置完成，共{len(self.filter.rules)}条规则")
+        logger.info(f"过滤器配置完成，共{len(self.filter.filter_rules)}条规则")
     
     async def start_monitoring(self, duration: Optional[int] = None):
         """开始监控"""
@@ -122,7 +122,7 @@ class NetworkMonitor:
             self.listener.on_loading_failed = self._on_loading_failed
             
             # 开始监听
-            await self.listener.start_listening()
+            await self.listener.start_monitoring()
             
             # 如果指定了持续时间，设置定时器
             if duration:
@@ -144,7 +144,6 @@ class NetworkMonitor:
         self.running = False
         
         if self.listener:
-            await self.listener.stop_listening()
             await self.listener.disconnect()
         
         # 处理收集到的数据
@@ -258,9 +257,9 @@ class NetworkMonitor:
                     if self.filter.should_include(standardized):
                         self.processed_transactions.append(standardized)
             
-            # 去重
+            # 过滤和去重处理
             before_dedup = len(self.processed_transactions)
-            self.processed_transactions = self.filter.deduplicate(self.processed_transactions)
+            self.processed_transactions = self.filter.filter_transactions(self.processed_transactions)
             after_dedup = len(self.processed_transactions)
             
             logger.info(f"数据处理完成: 原始{len(self.raw_transactions)}条 -> 过滤后{before_dedup}条 -> 去重后{after_dedup}条")

@@ -14,7 +14,7 @@ from datetime import datetime
 # 导入网络监控模块
 from main import NetworkMonitor, get_default_config
 from chrome_network_listener import ChromeNetworkListener
-from data_filter import DataFilter
+from data_filter import DataFilter, FilterRule
 from data_exporter import DataExporter
 
 # 配置日志
@@ -167,26 +167,26 @@ def example_data_filter():
     filter_engine = DataFilter()
     
     # 添加各种过滤规则
-    filter_engine.add_rule(
+    filter_engine.add_rule(FilterRule(
         name='api_only',
         rule_type='include',
         pattern=r'/api/',
         field='url'
-    )
+    ))
     
-    filter_engine.add_rule(
+    filter_engine.add_rule(FilterRule(
         name='exclude_images',
         rule_type='exclude',
         pattern=r'\.(png|jpg|jpeg|gif)$',
         field='url'
-    )
+    ))
     
-    filter_engine.add_rule(
+    filter_engine.add_rule(FilterRule(
         name='success_only',
         rule_type='include',
         pattern=r'^2\d\d$',
         field='status_code'
-    )
+    ))
     
     # 示例数据
     sample_transactions = [

@@ -45,8 +45,9 @@ class NetworkResponse:
 class ChromeNetworkListener:
     """Chrome DevTools Protocol 网络监听器"""
     
-    def __init__(self, debug_port: int = 9222):
+    def __init__(self, debug_port: int = 9222, host: str = 'localhost'):
         self.debug_port = debug_port
+        self.host = host
         self.websocket = None
         self.is_connected = False
         self.requests: Dict[str, NetworkRequest] = {}
@@ -61,7 +62,7 @@ class ChromeNetworkListener:
             # 获取可用的标签页
             import aiohttp
             async with aiohttp.ClientSession() as session:
-                async with session.get(f'http://localhost:{self.debug_port}/json') as resp:
+                async with session.get(f'http://{self.host}:{self.debug_port}/json') as resp:
                     tabs = await resp.json()
                     
             if not tabs:

@@ -1,0 +1,34 @@
+[
+    {
+        "filename": "test_audio_001.wav",
+        "sample_type": "negative",
+        "speaker_id": "speaker_1",
+        "text": "hello_system",
+        "audio_type": "wav",
+        "timestamp": "2025/10/15 08:10:15.500"
+    },
+    {
+        "filename": "test_audio_002.wav",
+        "sample_type": "positive",
+        "speaker_id": "speaker_1",
+        "text": "hello_vibe",
+        "audio_type": "wav",
+        "timestamp": "2025/10/15 08:12:18.200"
+    },
+    {
+        "filename": "test_audio_003.wav",
+        "sample_type": "negative",
+        "speaker_id": "speaker_2",
+        "text": "wake_up",
+        "audio_type": "wav",
+        "timestamp": "2025/10/15 08:12:25.800"
+    },
+    {
+        "filename": "test_audio_004.wav",
+        "sample_type": "positive",
+        "speaker_id": "speaker_1",
+        "text": "hello_vibe",
+        "audio_type": "wav",
+        "timestamp": "2025/10/15 08:12:28.100"
+    }
+]

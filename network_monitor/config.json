@@ -1,6 +1,6 @@
 {
   "chrome_host": "localhost",
-  "chrome_port": 9222,
+    "chrome_port": 9222,
   "session_id": "demo_session",
   "output_dir": "./output",
   "filters": {
