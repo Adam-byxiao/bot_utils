@@ -370,17 +370,48 @@ class VoiceMonitorFrame(wx.Frame):
                 logger.warning(f"时间戳解析失败: {msg.timestamp}, 错误: {e}")
                 formatted_time = datetime.now().strftime('%H:%M:%S')
             
-            # 原始数据格式（左侧）
-            raw_msg = f"[{formatted_time}] {msg_type.upper()}: {msg.content}"
+            # 原始数据格式（左侧）- 简化显示
+            raw_msg = f"[{formatted_time}] {msg_type.upper()}: {msg.content[:100]}{'...' if len(msg.content) > 100 else ''}"
             self.append_raw_data(raw_msg)
             
-            # 简化对话格式（右侧）
+            # 美化对话格式（右侧）
             if msg_type == 'input':
-                # 用户消息
-                simple_msg = f"👤 用户：\n{msg.content}\n{'─' * 50}"
+                # 用户消息 - 蓝色主题
+                simple_msg = f"""
+┌─ 👤 用户 ({formatted_time}) ─────────────────────────────────────
+│ {msg.content}
+└─────────────────────────────────────────────────────────────────
+
+"""
             else:
-                # 助手消息
-                simple_msg = f"🤖 助手：\n{msg.content}\n{'─' * 50}"
+                # 助手消息 - 绿色主题
+                # 处理长文本，自动换行
+                content_lines = []
+                words = msg.content.split(' ')
+                current_line = ""
+                max_line_length = 60
+                
+                for word in words:
+                    if len(current_line + word) <= max_line_length:
+                        current_line += word + " "
+                    else:
+                        if current_line:
+                            content_lines.append(current_line.strip())
+                        current_line = word + " "
+                
+                if current_line:
+                    content_lines.append(current_line.strip())
+                
+                # 格式化多行内容
+                formatted_content = ""
+                for line in content_lines:
+                    formatted_content += f"│ {line}\n"
+                
+                simple_msg = f"""
+┌─ 🤖 助手 ({formatted_time}) ─────────────────────────────────────
+{formatted_content}└─────────────────────────────────────────────────────────────────
+
+"""
             
             self.append_conversation(simple_msg)
     

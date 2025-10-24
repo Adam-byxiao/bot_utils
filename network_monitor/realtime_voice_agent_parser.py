@@ -225,16 +225,39 @@ class RealtimeVoiceAgentParser:
         return 'unknown', 'unknown'
     
     def _extract_content(self, item: Any) -> str:
-        """提取消息内容"""
+        """提取消息内容，专门处理语音消息的transcript"""
         if isinstance(item, str):
             return item
         elif isinstance(item, dict):
-            # 尝试多种可能的内容字段
+            # 首先检查是否是语音消息格式
+            if 'content' in item and isinstance(item['content'], list):
+                # 遍历content数组，查找transcript
+                transcripts = []
+                for content_item in item['content']:
+                    if isinstance(content_item, dict):
+                        # 检查是否有transcript字段
+                        if 'transcript' in content_item:
+                            transcript = content_item['transcript']
+                            if transcript and transcript.strip():  # 确保不是空字符串
+                                transcripts.append(transcript.strip())
+                
+                # 如果找到了transcript，返回合并的文本
+                if transcripts:
+                    return ' '.join(transcripts)
+            
+            # 如果没有找到transcript，尝试其他字段
             for field in ['content', 'message', 'text', 'data', 'value']:
                 if field in item:
                     content = item[field]
                     if isinstance(content, str):
                         return content
+                    elif isinstance(content, list) and content:
+                        # 如果是列表，尝试提取第一个元素的文本
+                        first_item = content[0]
+                        if isinstance(first_item, dict) and 'transcript' in first_item:
+                            return first_item['transcript']
+                        elif isinstance(first_item, str):
+                            return first_item
                     else:
                         return json.dumps(content, ensure_ascii=False)
         
