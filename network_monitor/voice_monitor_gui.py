@@ -349,9 +349,29 @@ class VoiceMonitorFrame(wx.Frame):
         
         # 显示消息
         for msg_type, msg in all_new_messages:
+            # 处理时间戳 - 支持多种格式
+            try:
+                # 尝试解析ISO格式时间戳
+                if isinstance(msg.timestamp, str):
+                    # 处理ISO格式时间戳
+                    if 'T' in msg.timestamp:
+                        # ISO格式: 2024-01-01T10:00:00Z 或 2024-01-01T10:00:00.123Z
+                        timestamp_str = msg.timestamp.replace('Z', '+00:00')
+                        dt = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                        formatted_time = dt.strftime('%H:%M:%S')
+                    else:
+                        # 可能是其他字符串格式，直接使用
+                        formatted_time = msg.timestamp
+                else:
+                    # 如果是数字，按Unix时间戳处理
+                    formatted_time = datetime.fromtimestamp(float(msg.timestamp)).strftime('%H:%M:%S')
+            except (ValueError, TypeError) as e:
+                # 如果时间戳解析失败，使用当前时间
+                logger.warning(f"时间戳解析失败: {msg.timestamp}, 错误: {e}")
+                formatted_time = datetime.now().strftime('%H:%M:%S')
+            
             # 原始数据格式（左侧）
-            timestamp_str = datetime.fromtimestamp(msg.timestamp).strftime('%H:%M:%S')
-            raw_msg = f"[{timestamp_str}] {msg_type.upper()}: {msg.content}"
+            raw_msg = f"[{formatted_time}] {msg_type.upper()}: {msg.content}"
             self.append_raw_data(raw_msg)
             
             # 简化对话格式（右侧）
