@@ -1,0 +1,82 @@
+{
+  "session_id": "session_CzH3hZ8xJjoMlREkpwGzl",
+  "dialogs": [
+    {
+      "dialog_id": "dialog_1_1768720325",
+      "user_input": "春节是几号?春节是几号?",
+      "assistant_output": "In 2026, the Chinese New Year, or Spring Festival, falls on February 17th. That's the date for the Lunar New Year celebration.",
+      "timestamp": "2026-01-18T15:12:05.008731",
+      "raw_data": {
+        "user_input": {
+          "itemId": "item_CzH3hZ8xJjoMlREkpwGzl",
+          "previousItemId": null,
+          "type": "message",
+          "role": "user",
+          "status": "completed",
+          "content": [
+            {
+              "type": "input_audio",
+              "audio": null,
+              "transcript": "春节是几号?春节是几号?"
+            }
+          ]
+        },
+        "assistant_output": {
+          "itemId": "item_CzH3pylPPSgoScCSyUO7V",
+          "type": "message",
+          "role": "assistant",
+          "status": "completed",
+          "content": [
+            {
+              "type": "output_audio",
+              "transcript": "In 2026, the Chinese New Year, or Spring Festival, falls on February 17th. That's the date for the Lunar New Year celebration.",
+              "audio": null
+            }
+          ]
+        }
+      },
+      "metadata": {
+        "user_index": 0,
+        "assistant_index": 2
+      }
+    }
+  ],
+  "raw_messages": [
+    {
+      "itemId": "item_CzH3hZ8xJjoMlREkpwGzl",
+      "previousItemId": null,
+      "type": "message",
+      "role": "user",
+      "status": "completed",
+      "content": [
+        {
+          "type": "input_audio",
+          "audio": null,
+          "transcript": "春节是几号?春节是几号?"
+        }
+      ]
+    },
+    {
+      "itemId": "item_CzH3lCzEYvKMCTZp8T96j",
+      "type": "function_call",
+      "status": "completed",
+      "arguments": "{  \n  \"query\": \"2026 春节是几月几号\"\n}",
+      "name": "search_intelligent",
+      "output": "{\"content\": `https://www.baibaidu.com/festivaldate/2026-2-17-101.html?utm_source=openai` )根据国务院办公厅发布的放假安排，春节假期从2月15日（农历腊月二十八，星期日）开始，至2月23日（农历正月初七，星期一）结束，共9天。 ( `https://www.bjfsh.gov.cn/zhxw/fsdt/202511/t20251105_40108387.shtml?utm_source=openai` )其中，2月14日（星期六）和2月28日（星期六）需要上班。 \"}]}"
+    },
+    {
+      "itemId": "item_CzH3pylPPSgoScCSyUO7V",
+      "type": "message",
+      "role": "assistant",
+      "status": "completed",
+      "content": [
+        {
+          "type": "output_audio",
+          "transcript": "In 2026, the Chinese New Year, or Spring Festival, falls on February 17th. That's the date for the Lunar New Year celebration.",
+          "audio": null
+        }
+      ]
+    }
+  ],
+  "export_timestamp": "2026-01-18T15:12:05.015732"
+}

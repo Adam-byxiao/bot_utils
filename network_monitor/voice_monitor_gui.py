@@ -104,6 +104,9 @@ class VoiceMonitorFrame(wx.Frame):
         self.is_monitoring = False
         self.monitoring_thread = None
         
+        # 对话历史记录
+        self.conversation_history = []
+        
         # 创建界面
         self.create_ui()
         self.center_on_screen()
@@ -571,7 +574,9 @@ class VoiceMonitorFrame(wx.Frame):
         return '\n'.join(formatted_paragraphs)
 
     def append_conversation(self, message: str):
-        """添加对话消息到界面（线程安全）"""
+        """添加对话内容（线程安全）"""
+        # 注意：对话历史记录现在由display_single_message方法处理
+        # 这里只负责UI显示
         wx.CallAfter(self._append_conversation_ui, message)
     
     def _append_conversation_ui(self, message: str):
@@ -841,8 +846,13 @@ class VoiceMonitorFrame(wx.Frame):
         """监控循环（在后台线程中运行）"""
         import time
         
-        input_count = 0
-        output_count = 0
+        # 使用集合来跟踪已处理的消息（基于时间戳和内容的哈希）
+        processed_messages = set()
+        
+        # UI更新限流变量
+        last_ui_update_time = 0
+        ui_update_interval = 2.0  # 最少2秒更新一次UI
+        pending_messages = []  # 待处理的消息队列
         
         while self.is_monitoring:
             try:
@@ -853,27 +863,75 @@ class VoiceMonitorFrame(wx.Frame):
                     # 解析数据
                     input_messages, output_messages, session_summary = self.monitor.parse_and_classify_data(history_data)
                     
-                    # 检查是否有新消息
-                    new_input_count = len(input_messages)
-                    new_output_count = len(output_messages)
+                    # 合并所有消息并按时间排序
+                    all_messages = []
                     
-                    if new_input_count > input_count or new_output_count > output_count:
-                        # 显示新消息
-                        self.display_new_messages(input_messages[input_count:], output_messages[output_count:])
+                    for msg in input_messages:
+                        all_messages.append(('input', msg))
+                    
+                    for msg in output_messages:
+                        all_messages.append(('output', msg))
+                    
+                    # 按时间戳排序 - 处理字符串格式的时间戳
+                    def get_sort_key(msg_tuple):
+                        msg_type, msg = msg_tuple
+                        timestamp = msg.timestamp
+                        if isinstance(timestamp, str):
+                            try:
+                                # 尝试解析ISO格式时间戳进行排序
+                                if 'T' in timestamp:
+                                    timestamp_str = timestamp.replace('Z', '+00:00')
+                                    return datetime.fromisoformat(timestamp_str)
+                                else:
+                                    # 如果不是ISO格式，直接按字符串排序
+                                    return timestamp
+                            except (ValueError, AttributeError):
+                                # 解析失败时使用原始字符串
+                                return timestamp
+                        else:
+                            return timestamp
+                    
+                    all_messages.sort(key=get_sort_key)
+                    
+                    # 收集新消息到待处理队列
+                    new_messages_found = False
+                    for msg_type, msg in all_messages:
+                        # 创建消息唯一标识符
+                        msg_id = f"{msg.timestamp}_{msg_type}_{hash(msg.content[:100])}"
                         
-                        input_count = new_input_count
-                        output_count = new_output_count
+                        if msg_id not in processed_messages:
+                            # 这是新消息，添加到待处理队列
+                            pending_messages.append((msg_type, msg))
+                            processed_messages.add(msg_id)
+                            new_messages_found = True
+                    
+                    # 检查是否需要更新UI（限流机制）
+                    current_time = time.time()
+                    should_update_ui = (
+                        new_messages_found and 
+                        (current_time - last_ui_update_time >= ui_update_interval or len(pending_messages) >= 5)
+                    )
+                    
+                    if should_update_ui and pending_messages:
+                        # 批量处理待处理的消息
+                        self.display_batch_messages(pending_messages)
                         
                         # 更新统计
+                        total_input = len(input_messages)
+                        total_output = len(output_messages)
                         self.update_stats({
-                            'input_count': input_count,
-                            'output_count': output_count,
-                            'total_count': input_count + output_count
+                            'input_count': total_input,
+                            'output_count': total_output,
+                            'total_count': total_input + total_output
                         })
+                        
+                        # 清空待处理队列并更新时间
+                        pending_messages.clear()
+                        last_ui_update_time = current_time
                 
                 # 等待一段时间再次检查
                 if self.is_monitoring:
-                    time.sleep(2)  # 2秒检查一次
+                    time.sleep(3)  # 增加到3秒检查一次，减少频率
                     
             except Exception as e:
                 logger.error(f"监控循环错误: {e}")
@@ -882,6 +940,94 @@ class VoiceMonitorFrame(wx.Frame):
     
 
     
+    def display_batch_messages(self, messages_batch: List[tuple]):
+        """批量显示消息，减少UI更新频率"""
+        if not messages_batch:
+            return
+            
+        # 批量构建消息内容
+        batch_content = []
+        for msg_type, message in messages_batch:
+            # 处理时间戳
+            if isinstance(message.timestamp, str):
+                try:
+                    # 尝试解析ISO格式时间戳
+                    if 'T' in message.timestamp:
+                        timestamp_str = message.timestamp.replace('Z', '+00:00')
+                        dt = datetime.fromisoformat(timestamp_str)
+                        formatted_time = dt.strftime("%H:%M:%S")
+                    else:
+                        # 如果不是ISO格式，截取前8位作为时间
+                        formatted_time = message.timestamp[:8] if len(message.timestamp) >= 8 else message.timestamp
+                except (ValueError, AttributeError):
+                    # 解析失败时使用当前时间
+                    formatted_time = datetime.now().strftime("%H:%M:%S")
+            else:
+                # 如果是datetime对象
+                formatted_time = message.timestamp.strftime("%H:%M:%S")
+            
+            # 格式化消息
+            if msg_type == 'input':
+                formatted_msg = f"[{formatted_time}] 用户: {message.content}"
+            else:  # output
+                formatted_msg = f"[{formatted_time}] 助手: {message.content}"
+            
+            batch_content.append(formatted_msg)
+            
+            # 添加到历史记录
+            self.conversation_history.append(formatted_msg)
+        
+        # 一次性更新UI
+        if batch_content:
+            batch_text = '\n'.join(batch_content)
+            wx.CallAfter(self._append_conversation_ui, batch_text)
+
+    def display_single_message(self, msg_type: str, message: VoiceMessage):
+        """显示单条消息"""
+        try:
+            # 处理时间戳 - message.timestamp 是字符串格式
+            if isinstance(message.timestamp, str):
+                try:
+                    # 尝试解析 ISO 格式时间戳
+                    if 'T' in message.timestamp:
+                        # ISO 格式: 2024-01-01T10:00:00Z 或 2024-01-01T10:00:00.123Z
+                        timestamp_str = message.timestamp.replace('Z', '+00:00')
+                        dt = datetime.fromisoformat(timestamp_str)
+                        formatted_time = dt.strftime("%H:%M:%S")
+                    else:
+                        # 如果不是标准ISO格式，直接使用前8个字符作为时间
+                        formatted_time = message.timestamp[:8] if len(message.timestamp) >= 8 else message.timestamp
+                except (ValueError, AttributeError):
+                    # 如果解析失败，使用当前时间
+                    formatted_time = datetime.now().strftime("%H:%M:%S")
+            else:
+                # 如果是datetime对象
+                formatted_time = message.timestamp.strftime("%H:%M:%S")
+            
+            if msg_type == 'input':
+                # 用户消息
+                formatted_message = f"[{formatted_time}] 用户: {message.content}"
+                speaker = "用户"
+            else:
+                # 助手消息
+                formatted_message = f"[{formatted_time}] 助手: {message.content}"
+                speaker = "助手"
+            
+            # 添加到对话历史
+            self.conversation_history.append({
+                'timestamp': message.timestamp,
+                'content': formatted_message,
+                'original_message': message.content,
+                'speaker': speaker
+            })
+            
+            # 在UI线程中更新显示
+            wx.CallAfter(self.append_conversation, formatted_message)
+            wx.CallAfter(self.append_raw_data, formatted_message)
+            
+        except Exception as e:
+            logger.error(f"显示单条消息时出错: {e}")
+
     def display_new_messages(self, new_input_messages: List[VoiceMessage], new_output_messages: List[VoiceMessage]):
         """显示新消息"""
         # 合并并按时间排序
@@ -923,64 +1069,30 @@ class VoiceMonitorFrame(wx.Frame):
             raw_msg = f"[{formatted_time}] {msg_type.upper()}: {msg.content[:100]}{'...' if len(msg.content) > 100 else ''}"
             self.append_raw_data(raw_msg)
             
-            # 美化对话格式（右侧）
+            # 简洁对话格式（右侧）- 只保留时间戳
             if msg_type == 'input':
-                # 用户消息 - 蓝色主题
-                simple_msg = f"""
-┌─ 👤 用户 ({formatted_time}) ─────────────────────────────────────
-│ {msg.content}
-└─────────────────────────────────────────────────────────────────
-
-"""
+                # 用户消息 - 简洁格式
+                simple_msg = f"👤 用户 ({formatted_time})\n{msg.content}\n\n"
             else:
-                # 助手消息 - 绿色主题
-                # 处理长文本，自动换行
-                content_lines = []
-                words = msg.content.split(' ')
-                current_line = ""
-                max_line_length = 60
-                
-                for word in words:
-                    if len(current_line + word) <= max_line_length:
-                        current_line += word + " "
-                    else:
-                        if current_line:
-                            content_lines.append(current_line.strip())
-                        current_line = word + " "
-                
-                if current_line:
-                    content_lines.append(current_line.strip())
-                
-                # 格式化多行内容
-                formatted_content = ""
-                for line in content_lines:
-                    formatted_content += f"│ {line}\n"
-                
-                simple_msg = f"""
-┌─ 🤖 助手 ({formatted_time}) ─────────────────────────────────────
-{formatted_content}└─────────────────────────────────────────────────────────────────
-
-"""
+                # 助手消息 - 简洁格式
+                simple_msg = f"🤖 助手 ({formatted_time})\n{msg.content}\n\n"
             
             self.append_conversation(simple_msg)
     
     def on_export_conversation(self, event):
         """导出对话内容"""
         try:
-            # 从聊天面板收集对话内容
-            conversation_content = ""
-            for child in self.chat_content_panel.GetChildren():
-                if isinstance(child, wx.Panel):
-                    for text_ctrl in child.GetChildren():
-                        if isinstance(text_ctrl, wx.StaticText):
-                            conversation_content += text_ctrl.GetLabel() + "\n\n"
-            
-            if not conversation_content.strip():
+            # 检查是否有对话内容
+            if not self.conversation_history:
                 wx.MessageBox("没有对话内容可导出", "提示", wx.OK | wx.ICON_INFORMATION)
                 return
             
             # 选择保存位置
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M')
+            default_filename = f"conversation_{timestamp}.md"
+            
             with wx.FileDialog(self, "保存对话记录",
+                             defaultFile=default_filename,
                              wildcard="Markdown files (*.md)|*.md",
                              style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as fileDialog:
                 
@@ -992,7 +1104,7 @@ class VoiceMonitorFrame(wx.Frame):
                 
                 try:
                     # 转换为Markdown格式
-                    markdown_content = self.convert_to_markdown(conversation_content)
+                    markdown_content = self.convert_to_markdown_from_history()
                     
                     # 写入文件
                     with open(pathname, 'w', encoding='utf-8') as file:
@@ -1007,9 +1119,8 @@ class VoiceMonitorFrame(wx.Frame):
             logger.error(f"导出对话时出错: {e}")
             wx.MessageBox(f"导出失败: {str(e)}", "错误", wx.OK | wx.ICON_ERROR)
     
-    def convert_to_markdown(self, conversation_content: str) -> str:
-        """将对话内容转换为markdown格式"""
-        lines = conversation_content.split('\n')
+    def convert_to_markdown_from_history(self) -> str:
+        """从对话历史记录转换为markdown格式"""
         markdown_lines = []
         
         # 添加标题
@@ -1020,57 +1131,51 @@ class VoiceMonitorFrame(wx.Frame):
         markdown_lines.append("---")
         markdown_lines.append("")
         
-        current_speaker = None
-        current_content = []
-        
-        for line in lines:
-            line = line.strip()
-            if not line:
-                continue
+        # 遍历对话历史记录
+        for entry in self.conversation_history:
+            timestamp = entry['timestamp']
+            message = entry['raw_message']
+            
+            # 解析消息类型
+            if "👤 用户" in message:
+                # 用户消息
+                markdown_lines.append(f"**用户** ({timestamp})：")
+                markdown_lines.append("")
                 
-            if line.startswith("👤 用户："):
-                # 保存之前的内容
-                if current_speaker and current_content:
-                    self.add_speaker_content_to_markdown(markdown_lines, current_speaker, current_content)
-                    current_content = []
+                # 清理消息内容
+                clean_message = message.replace("👤 用户", "").strip()
+                if clean_message.startswith("(") and ")" in clean_message:
+                    clean_message = clean_message.split(")", 1)[1].strip()
                 
-                current_speaker = "用户"
+                # 添加消息内容
+                if clean_message.strip():
+                    for line in clean_message.split('\n'):
+                        if line.strip():
+                            markdown_lines.append(f"> {line.strip()}")
                 
-            elif line.startswith("🤖 助手："):
-                # 保存之前的内容
-                if current_speaker and current_content:
-                    self.add_speaker_content_to_markdown(markdown_lines, current_speaker, current_content)
-                    current_content = []
+                markdown_lines.append("")
                 
-                current_speaker = "助手"
+            elif "🤖 助手" in message:
+                # 助手消息
+                markdown_lines.append(f"**助手** ({timestamp})：")
+                markdown_lines.append("")
                 
-            else:
-                # 内容行
-                if current_speaker:
-                    current_content.append(line)
-        
-        # 添加最后的内容
-        if current_speaker and current_content:
-            self.add_speaker_content_to_markdown(markdown_lines, current_speaker, current_content)
+                # 清理消息内容
+                clean_message = message.replace("🤖 助手", "").strip()
+                if clean_message.startswith("(") and ")" in clean_message:
+                    clean_message = clean_message.split(")", 1)[1].strip()
+                
+                # 添加消息内容
+                if clean_message.strip():
+                    for line in clean_message.split('\n'):
+                        if line.strip():
+                            markdown_lines.append(f"> {line.strip()}")
+                
+                markdown_lines.append("")
         
         return '\n'.join(markdown_lines)
     
-    def add_speaker_content_to_markdown(self, markdown_lines: list, speaker: str, content: list):
-        """添加说话者内容到markdown"""
-        if speaker == "用户":
-            markdown_lines.append("**用户**：")
-        else:
-            markdown_lines.append("**助手**：")
-        
-        markdown_lines.append("")
-        
-        # 添加内容，每行前面加上引用符号
-        for line in content:
-            if line.strip():
-                markdown_lines.append(f"> {line}")
-        
-        markdown_lines.append("")
-    
+
     def cleanup_temp_files(self):
         """清理中间文件"""
         try:
@@ -1100,6 +1205,9 @@ class VoiceMonitorFrame(wx.Frame):
         # 清空数据存储
         self.raw_data_content = ""
         self.stats_content = ""
+        
+        # 清空对话历史记录
+        self.conversation_history = []
     
     def on_close(self, event):
         """关闭窗口事件"""

@@ -1,0 +1,10 @@
+语音对话分析报告
+==================================================
+生成时间: 2026-01-18T15:12:05.052397
+对话数量: 1
+
+对话 1:
+用户输入: 春节是几号?春节是几号?
+助手回复: In 2026, the Chinese New Year, or Spring Festival, falls on February 17th. That's the date for the Lunar New Year celebration.
+----------------------------------------
+

@@ -232,9 +232,9 @@ class KWSStatsPanel(wx.Panel):
         title.SetFont(title_font)
         main_sizer.Add(title, 0, wx.ALL|wx.CENTER, 5)
         
-        # 创建两个提示词的统计区域
+        # 创建提示词的统计区域
         self.phrase_stats = {}
-        phrases = ["hello_vibe", "hey_vibe"]  # 可以根据需要修改
+        phrases = ["hey_vibe"]  # 仅使用hey_vibe唤醒词
         
         for phrase in phrases:
             # 创建分组框
@@ -655,21 +655,22 @@ class KWSMainFrame(wx.Frame):
                         record = self.kws_calculator.records[i]
                         self.records.append(record)
                         
-                        # 输出识别日志
-                        wx.CallAfter(self.output_panel.append_log,
-                                   f"第 {len(self.records)} 次识别: {record.phrase}, 分数: {record.score:.4f}")
+                        # 过滤掉hello_vibe的结果，只显示hey_vibe
+                        if record.phrase != "hello_vibe":
+                            wx.CallAfter(self.output_panel.append_log,
+                                       f"第 {len(self.records)} 次识别: {record.phrase}, 分数: {record.score:.4f}")
                         
-                        if self.output_panel.debug_mode:
+                        if self.output_panel.debug_mode and record.phrase != "hello_vibe":
                             wx.CallAfter(self.output_panel.append_log,
                                        f"详细: 时间={record.timestamp}, begin={record.begin_time}, end={record.end_time}")
                     
                     processed_kws_count = current_kws_count
             
-            def gui_update_trigger(phrase, triggered, timestamp):
+            def gui_update_trigger(phrase, triggered, timestamp, detailed_record=None):
                 nonlocal processed_triggered_count, processed_untriggered_count
                 
                 # 调用原始方法
-                original_update_trigger(phrase, triggered, timestamp)
+                original_update_trigger(phrase, triggered, timestamp, detailed_record)
                 
                 # 检查触发记录和未触发记录的变化
                 current_triggered = len(self.kws_calculator.triggered_records)
@@ -692,9 +693,10 @@ class KWSMainFrame(wx.Frame):
                                    record.score, 
                                    True)
                         
-                        # 输出触发状态日志
-                        wx.CallAfter(self.output_panel.append_log,
-                                   f"状态更新: {phrase} - 触发")
+                        # 过滤掉hello_vibe的状态更新
+                        if phrase != "hello_vibe":
+                            wx.CallAfter(self.output_panel.append_log,
+                                       f"状态更新: {phrase} - 触发")
                     
                     processed_triggered_count = current_triggered
                 
@@ -715,9 +717,10 @@ class KWSMainFrame(wx.Frame):
                                    record.score, 
                                    False)
                         
-                        # 输出触发状态日志
-                        wx.CallAfter(self.output_panel.append_log,
-                                   f"状态更新: {phrase} - 未触发")
+                        # 过滤掉hello_vibe的状态更新
+                        if phrase != "hello_vibe":
+                            wx.CallAfter(self.output_panel.append_log,
+                                       f"状态更新: {phrase} - 未触发")
                     
                     processed_untriggered_count = current_untriggered
             

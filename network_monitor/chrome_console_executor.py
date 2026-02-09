@@ -142,7 +142,7 @@ class ChromeConsoleExecutor:
     
     async def get_realtime_voice_agent_history(self) -> Dict:
         """
-        获取 realtimeVoiceAgent.session.history 的内容
+        获取 realtimeManager.getHistory() 的内容
         
         Returns:
             包含历史记录的字典
@@ -150,10 +150,9 @@ class ChromeConsoleExecutor:
         expression = """
         (function() {
             try {
-                if (typeof realtimeVoiceAgent !== 'undefined' && 
-                    realtimeVoiceAgent && 
-                    realtimeVoiceAgent.session) {
-                    return realtimeVoiceAgent.session.history || [];
+                if (typeof realtimeManager !== 'undefined' && 
+                    typeof realtimeManager.getHistory === 'function') {
+                    return realtimeManager.getHistory() || [];
                 } else {
                     return [];
                 }
@@ -165,7 +164,7 @@ class ChromeConsoleExecutor:
         result = await self.execute_javascript(expression)
         
         if result["success"]:
-            logger.info("成功获取 realtimeVoiceAgent.session.history")
+            logger.info("成功调用 realtimeManager.getHistory()")
             return result
         else:
             logger.error(f"获取历史记录失败: {result.get('error')}")

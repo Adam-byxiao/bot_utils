@@ -1,7 +1,7 @@
 """
 远程语音代理监控器
 整合 Chrome DevTools 连接、JavaScript 执行、数据解析和文件导出功能
-用于通过 SSH 端口转发连接远程设备，获取并解析 realtimeVoiceAgent.session.history 数据
+用于通过 SSH 端口转发连接远程设备，获取并解析 realtimeManager.getHistory() 数据
 """
 
 import asyncio
@@ -87,13 +87,13 @@ class RemoteVoiceAgentMonitor:
     
     async def get_session_history(self) -> Optional[List[Dict]]:
         """
-        获取 realtimeVoiceAgent.session.history 数据
+        获取 realtimeManager.getHistory() 数据
         
         Returns:
             会话历史数据，如果获取失败则返回 None
         """
         try:
-            self.logger.info("获取 realtimeVoiceAgent.session.history 数据")
+            self.logger.info("调用 realtimeManager.getHistory() 获取数据")
             result = await self.console_executor.get_realtime_voice_agent_history()
             
             if result.get("success", False):

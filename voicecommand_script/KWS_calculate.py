@@ -33,13 +33,21 @@ logger = logging.getLogger(__name__)
 @dataclass
 class KWSRecord:
     """KWS识别记录数据结构"""
-    timestamp: str
-    phrase: str
-    score: float
-    begin_time: int
-    end_time: int
-    triggered: bool
-    raw_log: str
+    timestamp: str                  # 时间戳
+    phrase: str                     # 唤醒词
+    score: float                    # 识别分数
+    begin_time: int                 # 开始时间
+    end_time: int                   # 结束时间
+    triggered: bool                 # 是否触发
+    raw_log: str                    # 原始日志
+    predicted_label_id: int = None   # 预测标签ID (0或1)
+    confidence_score: float = None  # 置信度分数
+    raw_logits: str = None          # 原始logits
+    probabilities: str = None        # 概率分布
+    preprocess_cost: int = None     # 预处理耗时(ms)
+    rknn_run_cost: int = None       # RKNN运行耗时(ms)
+    sum_cost: int = None            # 总耗时(ms)
+    detailed_raw_log: str = None    # 详细原始日志
 
 class SSHLogMonitor:
     """SSH日志监控器"""
@@ -106,10 +114,23 @@ class KWSLogParser:
     """KWS日志解析器"""
     
     def __init__(self):
-        # 正则表达式模式
+        # 正则表达式模式 - 更新为新的日志格式
         self.kws_pattern = re.compile(
             r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z).*?'
             r'Model: (\w+) recognized phrase: (\w+), score: ([\d.]+), begin: ([\d.e+-]+), end: ([\d.e+-]+)'
+        )
+        
+        # 新的结果详情模式 (多行匹配)
+        self.results_pattern = re.compile(
+            r'(\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z).*?'
+            r'--- Model:(\w+) Results ---[\s\S]*?'
+            r'Raw Logits:\s*\[(.*?)\][\s\S]*?'
+            r'Probabilities:\s*\[(.*?)\][\s\S]*?'
+            r'==> Predicted Label ID:\s*(\d+)[\s\S]*?'
+            r'==> Confidence Score:\s*([\d.]+)[\s\S]*?'
+            r'==> Preprocess Cost:\s*(\d+)ms[\s\S]*?'
+            r'==> Rknn Run Cost:\s*(\d+)ms[\s\S]*?'
+            r'==> Sum Cost:\s*(\d+)ms'
         )
         
         self.save_record_pattern = re.compile(
@@ -134,6 +155,26 @@ class KWSLogParser:
                 'score': float(score),
                 'begin': int(float(begin)),  # 支持科学计数法
                 'end': int(float(end)),      # 支持科学计数法
+                'raw_log': line.strip()
+            }
+        return None
+    
+    def parse_results_line(self, line: str) -> Optional[Dict]:
+        """解析结果详情行"""
+        match = self.results_pattern.search(line)
+        if match:
+            timestamp, model, raw_logits, probabilities, label_id, confidence_score, preprocess_cost, rknn_cost, sum_cost = match.groups()
+            return {
+                'timestamp': timestamp,
+                'model': model.strip(),
+                'raw_logits': raw_logits.strip(),
+                'probabilities': probabilities.strip(),
+                'predicted_label_id': int(label_id),
+                'confidence_score': float(confidence_score),
+                'preprocess_cost': int(preprocess_cost),
+                'rknn_run_cost': int(rknn_cost),
+                'sum_cost': int(sum_cost),
+                'triggered': int(label_id) == 1,  # Label ID为1表示检测到唤醒
                 'raw_log': line.strip()
             }
         return None
@@ -176,6 +217,8 @@ class KWSCalculator:
         self.monitoring = False
         self.output_dir = "kws_output"
         self.connection_start_time = None  # 记录连接开始时间
+        self._current_multiline_buffer = ""  # 多行日志缓冲区
+        self._in_results_section = False     # 是否在结果详情部分
         
         # 创建输出目录
         os.makedirs(self.output_dir, exist_ok=True)
@@ -221,8 +264,55 @@ class KWSCalculator:
             self.monitoring = False
     
     def _process_log_line(self, line: str):
-        """处理单行日志"""
-        # 解析KWS识别行
+        """处理日志行，支持多行日志"""
+        # 检查是否开始新的结果详情部分
+        if "--- Model:" in line and "Results ---" in line:
+            self._in_results_section = True
+            self._current_multiline_buffer = line + " "
+            return
+        
+        # 如果在结果详情部分，累积日志行
+        if self._in_results_section:
+            self._current_multiline_buffer += line + " "
+            
+            # 检查是否到达结果详情结束（包含Sum Cost表示结束）
+            if "Sum Cost:" in line:
+                # 尝试解析完整的多行结果详情
+                results_data = self.parser.parse_results_line(self._current_multiline_buffer)
+                if results_data:
+                    # 检查时间戳是否在连接后
+                    if not self._is_after_connection(results_data['timestamp']):
+                        logger.debug(f"忽略连接前的结果详情记录: {results_data['timestamp']}")
+                        self._in_results_section = False
+                        self._current_multiline_buffer = ""
+                        return
+                        
+                    logger.info(f"检测到结果详情: model={results_data['model']}, label_id={results_data['predicted_label_id']}, confidence={results_data['confidence_score']}")
+                    
+                    # 创建详细记录
+                    detailed_record = {
+                        'timestamp': results_data['timestamp'],
+                        'model': results_data['model'],
+                        'predicted_label_id': results_data['predicted_label_id'],
+                        'confidence_score': results_data['confidence_score'],
+                        'raw_logits': results_data['raw_logits'],
+                        'probabilities': results_data['probabilities'],
+                        'preprocess_cost': results_data['preprocess_cost'],
+                        'rknn_run_cost': results_data['rknn_run_cost'],
+                        'sum_cost': results_data['sum_cost'],
+                        'triggered': results_data['triggered'],
+                        'raw_log': results_data['raw_log']
+                    }
+                    
+                    # 更新最近的KWS记录状态
+                    self._update_trigger_status(results_data['model'], results_data['triggered'], results_data['timestamp'], detailed_record)
+                
+                # 重置状态
+                self._in_results_section = False
+                self._current_multiline_buffer = ""
+            return
+        
+        # 解析KWS识别行（单行）
         kws_data = self.parser.parse_kws_line(line)
         if kws_data:
             # 检查时间戳是否在连接后
@@ -239,7 +329,7 @@ class KWSCalculator:
                 score=kws_data['score'],
                 begin_time=kws_data['begin'],
                 end_time=kws_data['end'],
-                triggered=False,  # 默认未触发，后续根据SaveRecord/Triggered更新
+                triggered=False,  # 默认未触发，后续根据结果详情更新
                 raw_log=kws_data['raw_log']
             )
             self.records.append(record)
@@ -269,23 +359,38 @@ class KWSCalculator:
             self._update_trigger_status(triggered_data['phrase'], True, triggered_data['timestamp'])
             return
     
-    def _update_trigger_status(self, phrase: str, triggered: bool, timestamp: str):
+    def _update_trigger_status(self, phrase: str, triggered: bool, timestamp: str, detailed_record: Optional[Dict] = None):
         """更新触发状态"""
         # 查找最近的匹配记录
         for record in reversed(self.records):
             if (record.phrase == phrase and 
-                not hasattr(record, 'status_updated') and
                 abs(self._timestamp_diff(record.timestamp, timestamp)) < 5):  # 5秒内的记录
                 
                 record.triggered = triggered
-                record.status_updated = True
+                
+                # 添加详细结果信息
+                if detailed_record:
+                    record.predicted_label_id = detailed_record['predicted_label_id']
+                    record.confidence_score = detailed_record['confidence_score']
+                    record.raw_logits = detailed_record['raw_logits']
+                    record.probabilities = detailed_record['probabilities']
+                    record.preprocess_cost = detailed_record['preprocess_cost']
+                    record.rknn_run_cost = detailed_record['rknn_run_cost']
+                    record.sum_cost = detailed_record['sum_cost']
+                    record.detailed_raw_log = detailed_record['raw_log']
                 
                 if triggered:
                     self.triggered_records.append(record)
-                    logger.info(f"记录已触发: {phrase}, score: {record.score}")
+                    if detailed_record:
+                        logger.info(f"记录已触发: {phrase}, label_id: {record.predicted_label_id}, confidence: {record.confidence_score}")
+                    else:
+                        logger.info(f"记录已触发: {phrase}, score: {record.score}")
                 else:
                     self.untriggered_records.append(record)
-                    logger.info(f"记录未触发: {phrase}, score: {record.score}")
+                    if detailed_record:
+                        logger.info(f"记录未触发: {phrase}, label_id: {record.predicted_label_id}, confidence: {record.confidence_score}")
+                    else:
+                        logger.info(f"记录未触发: {phrase}, score: {record.score}")
                 break
     
     def _timestamp_diff(self, ts1: str, ts2: str) -> float:
@@ -340,7 +445,8 @@ class KWSCalculator:
         csv_file = os.path.join(self.output_dir, f"kws_results_{timestamp}.csv")
         with open(csv_file, 'w', newline='', encoding='utf-8') as f:
             writer = csv.writer(f)
-            writer.writerow(['时间戳', '唤醒词', '分数', '开始时间', '结束时间', '是否触发', '原始日志'])
+            writer.writerow(['时间戳', '唤醒词', '分数', '开始时间', '结束时间', '是否触发', 
+                           '预测标签ID', '置信度分数', '预处理耗时(ms)', 'RKNN运行耗时(ms)', '总耗时(ms)', '原始日志'])
             
             for record in self.records:
                 writer.writerow([
@@ -350,6 +456,11 @@ class KWSCalculator:
                     record.begin_time,
                     record.end_time,
                     '是' if record.triggered else '否',
+                    record.predicted_label_id if hasattr(record, 'predicted_label_id') else 'N/A',
+                    record.confidence_score if hasattr(record, 'confidence_score') else 'N/A',
+                    record.preprocess_cost if hasattr(record, 'preprocess_cost') else 'N/A',
+                    record.rknn_run_cost if hasattr(record, 'rknn_run_cost') else 'N/A',
+                    record.sum_cost if hasattr(record, 'sum_cost') else 'N/A',
                     record.raw_log
                 ])
         

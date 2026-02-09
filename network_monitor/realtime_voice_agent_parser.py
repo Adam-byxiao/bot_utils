@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-realtimeVoiceAgent.session.history 数据解析器
+realtimeManager.getHistory() 数据解析器
 用于解析和分类语音代理的会话历史数据
 """
 
@@ -69,7 +69,7 @@ class RealtimeVoiceAgentParser:
         解析历史数据
         
         Args:
-            history_data: 从 realtimeVoiceAgent.session.history 获取的数据
+            history_data: 从 realtimeManager.getHistory() 获取的数据
             
         Returns:
             解析是否成功

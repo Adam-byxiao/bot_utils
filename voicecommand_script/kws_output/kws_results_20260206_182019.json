@@ -1,0 +1,82 @@
+{
+  "all_records": [
+    {
+      "timestamp": "2026-02-06T06:10:40.758756Z",
+      "phrase": "hey_vibe",
+      "score": 0.950775,
+      "begin_time": 4267440,
+      "end_time": 4278960,
+      "triggered": false,
+      "raw_log": "2026-02-06T06:10:40.758756Z INFO vibe-ai-server: [kws_sensory.cc(257)] Model: hey_hello_vibe recognized phrase: hey_vibe, score: 0.950775, begin: 4.26744e+06, end: 4.27896e+06",
+      "predicted_label_id": 0,
+      "confidence_score": 0.999999,
+      "raw_logits": "Label 0: 6.53906, Label 1: -6.87891",
+      "probabilities": "Label 0: 0.999999, Label 1: 1.48816e-06",
+      "preprocess_cost": 11,
+      "rknn_run_cost": 211,
+      "sum_cost": 223,
+      "detailed_raw_log": "2026-02-06T06:10:40.982660Z INFO vibe-ai-server: [kws_sensory.cc(914)] --- Model:hey_vibe Results --- Raw Logits:        [Label 0: 6.53906, Label 1: -6.87891] Probabilities:     [Label 0: 0.999999, Label 1: 1.48816e-06] ------------------------- ==> Predicted Label ID: 0 ==> Confidence Score:   0.999999 ==> Preprocess Cost:    11ms ==> Rknn Run Cost:      211ms ==> Sum Cost:     223ms"
+    },
+    {
+      "timestamp": "2026-02-06T06:11:15.123456Z",
+      "phrase": "hello_vibe",
+      "score": 0.982345,
+      "begin_time": 4345670,
+      "end_time": 4356780,
+      "triggered": true,
+      "raw_log": "2026-02-06T06:11:15.123456Z INFO vibe-ai-server: [kws_sensory.cc(257)] Model: hello_vibe recognized phrase: hello_vibe, score: 0.982345, begin: 4.34567e+06, end: 4.35678e+06",
+      "predicted_label_id": 1,
+      "confidence_score": 0.999877,
+      "raw_logits": "Label 0: -2.34567, Label 1: 8.91234",
+      "probabilities": "Label 0: 0.000123, Label 1: 0.999877",
+      "preprocess_cost": 15,
+      "rknn_run_cost": 198,
+      "sum_cost": 213,
+      "detailed_raw_log": "2026-02-06T06:11:15.345678Z INFO vibe-ai-server: [kws_sensory.cc(914)] --- Model:hello_vibe Results --- Raw Logits:        [Label 0: -2.34567, Label 1: 8.91234] Probabilities:     [Label 0: 0.000123, Label 1: 0.999877] ------------------------- ==> Predicted Label ID: 1 ==> Confidence Score:   0.999877 ==> Preprocess Cost:    15ms ==> Rknn Run Cost:      198ms ==> Sum Cost:     213ms"
+    }
+  ],
+  "triggered_records": [
+    {
+      "timestamp": "2026-02-06T06:11:15.123456Z",
+      "phrase": "hello_vibe",
+      "score": 0.982345,
+      "begin_time": 4345670,
+      "end_time": 4356780,
+      "triggered": true,
+      "raw_log": "2026-02-06T06:11:15.123456Z INFO vibe-ai-server: [kws_sensory.cc(257)] Model: hello_vibe recognized phrase: hello_vibe, score: 0.982345, begin: 4.34567e+06, end: 4.35678e+06",
+      "predicted_label_id": 1,
+      "confidence_score": 0.999877,
+      "raw_logits": "Label 0: -2.34567, Label 1: 8.91234",
+      "probabilities": "Label 0: 0.000123, Label 1: 0.999877",
+      "preprocess_cost": 15,
+      "rknn_run_cost": 198,
+      "sum_cost": 213,
+      "detailed_raw_log": "2026-02-06T06:11:15.345678Z INFO vibe-ai-server: [kws_sensory.cc(914)] --- Model:hello_vibe Results --- Raw Logits:        [Label 0: -2.34567, Label 1: 8.91234] Probabilities:     [Label 0: 0.000123, Label 1: 0.999877] ------------------------- ==> Predicted Label ID: 1 ==> Confidence Score:   0.999877 ==> Preprocess Cost:    15ms ==> Rknn Run Cost:      198ms ==> Sum Cost:     213ms"
+    }
+  ],
+  "untriggered_records": [
+    {
+      "timestamp": "2026-02-06T06:10:40.758756Z",
+      "phrase": "hey_vibe",
+      "score": 0.950775,
+      "begin_time": 4267440,
+      "end_time": 4278960,
+      "triggered": false,
+      "raw_log": "2026-02-06T06:10:40.758756Z INFO vibe-ai-server: [kws_sensory.cc(257)] Model: hey_hello_vibe recognized phrase: hey_vibe, score: 0.950775, begin: 4.26744e+06, end: 4.27896e+06",
+      "predicted_label_id": 0,
+      "confidence_score": 0.999999,
+      "raw_logits": "Label 0: 6.53906, Label 1: -6.87891",
+      "probabilities": "Label 0: 0.999999, Label 1: 1.48816e-06",
+      "preprocess_cost": 11,
+      "rknn_run_cost": 211,
+      "sum_cost": 223,
+      "detailed_raw_log": "2026-02-06T06:10:40.982660Z INFO vibe-ai-server: [kws_sensory.cc(914)] --- Model:hey_vibe Results --- Raw Logits:        [Label 0: 6.53906, Label 1: -6.87891] Probabilities:     [Label 0: 0.999999, Label 1: 1.48816e-06] ------------------------- ==> Predicted Label ID: 0 ==> Confidence Score:   0.999999 ==> Preprocess Cost:    11ms ==> Rknn Run Cost:      211ms ==> Sum Cost:     223ms"
+    }
+  ],
+  "summary": {
+    "total_records": 2,
+    "triggered_count": 1,
+    "untriggered_count": 1,
+    "trigger_rate": 0.5
+  }
+}

@@ -6,6 +6,8 @@ from wx.adv import AboutDialogInfo, AboutBox
 from wx.lib.pubsub import pub
 from audio_script.AudioAligner import AudioAlignerApp
 from audio_script.Video2Audio import AudioConverterApp
+from audio_script.AudioResampler import AudioResamplerApp
+from audio_script.AudioGenderSplitter import AudioGenderSplitterApp
 import time  # 添加标准库导入
 
 class AudioToolsMainFrame(wx.Frame):
@@ -60,10 +62,24 @@ class AudioToolsMainFrame(wx.Frame):
         self.align_btn.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
         self.align_btn.SetToolTip("将录制音频与参考音频对齐")
         self.align_btn.Bind(wx.EVT_BUTTON, self.on_align)
+
+        # 采样率转换按钮
+        self.resample_btn = wx.Button(self.panel, label="采样率转换工具")
+        self.resample_btn.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
+        self.resample_btn.SetToolTip("批量将当前/指定文件夹下的音频采样率转换为常见值")
+        self.resample_btn.Bind(wx.EVT_BUTTON, self.on_resample)
+        
+        # 男女声拆分按钮
+        self.gender_btn = wx.Button(self.panel, label="男女声拆分工具")
+        self.gender_btn.SetFont(wx.Font(12, wx.FONTFAMILY_DEFAULT, wx.FONTSTYLE_NORMAL, wx.FONTWEIGHT_NORMAL))
+        self.gender_btn.SetToolTip("在9.8秒处截断并分别输出男声与女声")
+        self.gender_btn.Bind(wx.EVT_BUTTON, self.on_gender)
         
         # 添加按钮到网格
         btn_sizer.Add(self.convert_btn, 0, wx.EXPAND)
         btn_sizer.Add(self.align_btn, 0, wx.EXPAND)
+        btn_sizer.Add(self.resample_btn, 0, wx.EXPAND)
+        btn_sizer.Add(self.gender_btn, 0, wx.EXPAND)
         
         # 功能描述区域
         desc_box = wx.StaticBox(self.panel, label="功能描述")
@@ -80,7 +96,15 @@ class AudioToolsMainFrame(wx.Frame):
             "   - 将录制音频与参考音频时间对齐\n"
             "   - 自动检测最佳对齐位置\n"
             "   - 支持多种音频格式(WAV, MP3, FLAC等)\n"
-            "   - 批量处理文件夹中的音频文件"
+            "   - 批量处理文件夹中的音频文件\n\n"
+            "3. 采样率转换工具：\n"
+            "   - 批量将音频采样率转换为常用采样率(48000/44100/32000/22050/16000/11025/8000)\n"
+            "   - 支持选择声道(单声道/立体声)或保持原样\n"
+            "   - 支持递归处理子文件夹与是否覆盖原文件\n\n"
+            "4. 男女声拆分工具：\n"
+            "   - 将音频在9.8秒处截断拆分为男声与女声\n"
+            "   - 支持递归处理与覆盖选项\n"
+            "   - 输出分别保存至自选的男女声文件夹"
         )
         
         desc_sizer.Add(self.desc_text, 1, wx.EXPAND|wx.ALL, 5)
@@ -206,6 +230,26 @@ class AudioToolsMainFrame(wx.Frame):
         except Exception as e:
             self.log(f"打开音频对齐工具失败: {str(e)}")
             wx.MessageBox(f"无法打开音频对齐工具: {str(e)}", "错误", wx.OK|wx.ICON_ERROR)
+
+    def on_resample(self, event):
+        """打开采样率转换工具"""
+        try:
+            self.log("打开采样率转换工具...")
+            resampler = AudioResamplerApp(self)
+            resampler.Show()
+        except Exception as e:
+            self.log(f"打开采样率转换工具失败: {str(e)}")
+            wx.MessageBox(f"无法打开采样率转换工具: {str(e)}", "错误", wx.OK|wx.ICON_ERROR)
+
+    def on_gender(self, event):
+        """打开男女声拆分工具"""
+        try:
+            self.log("打开男女声拆分工具...")
+            splitter = AudioGenderSplitterApp(self)
+            splitter.Show()
+        except Exception as e:
+            self.log(f"打开男女声拆分工具失败: {str(e)}")
+            wx.MessageBox(f"无法打开男女声拆分工具: {str(e)}", "错误", wx.OK|wx.ICON_ERROR)
     
     def on_help(self, event):
         """打开帮助文档"""

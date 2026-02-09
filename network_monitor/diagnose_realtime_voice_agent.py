@@ -100,12 +100,11 @@ class RealtimeVoiceAgentDiagnostic:
                 (function() {
                     try {
                         return {
-                            hasSession: typeof realtimeVoiceAgent.session !== 'undefined',
-                            hasHistory: typeof realtimeVoiceAgent.session?.history !== 'undefined',
-                            sessionType: typeof realtimeVoiceAgent.session,
-                            historyType: typeof realtimeVoiceAgent.session?.history,
-                            historyLength: Array.isArray(realtimeVoiceAgent.session?.history) ? 
-                                         realtimeVoiceAgent.session.history.length : 'not array'
+                            hasManager: typeof realtimeManager !== 'undefined',
+                            hasGetHistory: typeof realtimeManager?.getHistory !== 'undefined',
+                            managerType: typeof realtimeManager,
+                            getHistoryType: typeof realtimeManager?.getHistory,
+                            getHistoryResult: typeof realtimeManager?.getHistory()
                         };
                     } catch (e) {
                         return { error: e.message };
