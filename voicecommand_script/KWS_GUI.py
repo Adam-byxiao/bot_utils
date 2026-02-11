@@ -20,7 +20,25 @@ import sys
 try:
     from KWS_calculate import KWSCalculator, KWSRecord
 except ImportError:
-    print("警告: 无法导入KWS_calculate模块，请确保文件在同一目录下")
+    # 尝试从绝对路径导入
+    import os
+    import sys
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    if script_dir not in sys.path:
+        sys.path.insert(0, script_dir)
+    try:
+        from KWS_calculate import KWSCalculator, KWSRecord
+    except ImportError as e:
+        print(f"警告: 无法导入KWS_calculate模块: {e}")
+        print("请确保KWS_calculate.py文件在当前目录或Python路径中")
+        # 创建空的占位类以避免后续错误
+        class KWSCalculator:
+            def __init__(self, *args, **kwargs):
+                raise ImportError("KWSCalculator模块导入失败")
+        
+        class KWSRecord:
+            def __init__(self, *args, **kwargs):
+                raise ImportError("KWSRecord模块导入失败")
 
 class TestConnectionDialog(wx.Dialog):
     """测试连接对话框"""
@@ -653,10 +671,10 @@ class KWSMainFrame(wx.Frame):
                     # 处理新增的KWS识别记录
                     for i in range(processed_kws_count, current_kws_count):
                         record = self.kws_calculator.records[i]
-                        self.records.append(record)
                         
-                        # 过滤掉hello_vibe的结果，只显示hey_vibe
+                        # 只处理hey_vibe的记录，hello_vibe不添加到显示列表
                         if record.phrase != "hello_vibe":
+                            self.records.append(record)
                             wx.CallAfter(self.output_panel.append_log,
                                        f"第 {len(self.records)} 次识别: {record.phrase}, 分数: {record.score:.4f}")
                         
@@ -681,8 +699,8 @@ class KWSMainFrame(wx.Frame):
                     for i in range(processed_triggered_count, current_triggered):
                         record = self.kws_calculator.triggered_records[i]
                         
-                        # 如果这个记录不在我们的记录列表中，添加它
-                        if record not in self.records:
+                        # 只处理hey_vibe的记录，hello_vibe不添加到显示列表
+                        if record.phrase != "hello_vibe" and record not in self.records:
                             self.records.append(record)
                             wx.CallAfter(self.output_panel.append_log,
                                        f"第 {len(self.records)} 次识别: {record.phrase}, 分数: {record.score:.4f}")
@@ -705,8 +723,8 @@ class KWSMainFrame(wx.Frame):
                     for i in range(processed_untriggered_count, current_untriggered):
                         record = self.kws_calculator.untriggered_records[i]
                         
-                        # 如果这个记录不在我们的记录列表中，添加它
-                        if record not in self.records:
+                        # 只处理hey_vibe的记录，hello_vibe不添加到显示列表
+                        if record.phrase != "hello_vibe" and record not in self.records:
                             self.records.append(record)
                             wx.CallAfter(self.output_panel.append_log,
                                        f"第 {len(self.records)} 次识别: {record.phrase}, 分数: {record.score:.4f}")

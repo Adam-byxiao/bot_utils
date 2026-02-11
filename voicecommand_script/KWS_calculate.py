@@ -355,8 +355,21 @@ class KWSCalculator:
                 logger.debug(f"忽略连接前的触发记录: {triggered_data['timestamp']}")
                 return
                 
-            logger.info(f"检测到触发记录: phrase={triggered_data['phrase']}")
-            self._update_trigger_status(triggered_data['phrase'], True, triggered_data['timestamp'])
+            # 检查是否已经有详细的结果信息，避免重复更新
+            has_detailed_info = False
+            for record in self.records:
+                if (record.phrase == triggered_data['phrase'] and 
+                    abs(self._timestamp_diff(record.timestamp, triggered_data['timestamp'])) < 5 and
+                    record.predicted_label_id is not None):
+                    has_detailed_info = True
+                    break
+            
+            # 如果没有详细结果信息，才进行状态更新
+            if not has_detailed_info:
+                logger.info(f"检测到触发记录: phrase={triggered_data['phrase']}")
+                self._update_trigger_status(triggered_data['phrase'], True, triggered_data['timestamp'])
+            else:
+                logger.debug(f"跳过重复的触发记录（已有详细结果）: phrase={triggered_data['phrase']}")
             return
     
     def _update_trigger_status(self, phrase: str, triggered: bool, timestamp: str, detailed_record: Optional[Dict] = None):
